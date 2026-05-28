@@ -142,6 +142,21 @@ textarea {
   background: #b83232;
 }
 
+.status-pill,
+.notice {
+  background: #e8f5ee;
+  border-radius: 999px;
+  color: #17613a;
+  display: inline-block;
+  font-weight: 800;
+  padding: 0.3rem 0.65rem;
+}
+
+.notice {
+  background: #eef4ff;
+  color: #2557d6;
+}
+
 .tabs,
 .actions {
   display: flex;

@@ -1,6 +1,7 @@
 const apiBase = "/api";
 let selectedJob = null;
 let activeTab = "cover_letter";
+let notice = "";
 
 const fields = {
   health: document.querySelector("#health"),
@@ -74,6 +75,8 @@ function renderDetail() {
   fields.detail.innerHTML = `
     <h2>${escapeHtml(selectedJob.title)}</h2>
     <p class="meta">${escapeHtml([selectedJob.company, selectedJob.location, selectedJob.job_type].filter(Boolean).join(" | "))}</p>
+    <p><strong>Status:</strong> <span class="status-pill">${selectedJob.status}</span></p>
+    ${notice ? `<p class="notice">${escapeHtml(notice)}</p>` : ""}
     <div class="actions">
       ${statusButton("READY", "Mark as Ready")}
       ${statusButton("SUBMITTED", "Mark as Submitted")}
@@ -148,15 +151,20 @@ function renderRecruiterPanel(job) {
 }
 
 async function updateStatus(status) {
+  notice = "Updating status...";
+  renderDetail();
   selectedJob = await request(`/jobs/${selectedJob.id}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
+  notice = `Status updated to ${status}.`;
+  await loadJobs();
   renderDetail();
-  loadJobs();
 }
 
 async function saveArtifact() {
+  notice = "Saving edits...";
+  renderDetail();
   selectedJob = await request(`/jobs/${selectedJob.id}/artifacts`, {
     method: "PATCH",
     body: JSON.stringify({
@@ -164,17 +172,21 @@ async function saveArtifact() {
       content: document.querySelector("#artifact-editor").value,
     }),
   });
+  notice = "Edits saved.";
+  await loadJobs();
   renderDetail();
-  loadJobs();
 }
 
 async function regenerateArtifact() {
+  notice = "Regenerating artifact...";
+  renderDetail();
   selectedJob = await request(`/jobs/${selectedJob.id}/regenerate`, {
     method: "POST",
     body: JSON.stringify({ artifact: activeTab }),
   });
+  notice = "Artifact regenerated.";
+  await loadJobs();
   renderDetail();
-  loadJobs();
 }
 
 function escapeHtml(value) {
