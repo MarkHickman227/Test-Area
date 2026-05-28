@@ -1,0 +1,179 @@
+:root {
+  color: #172033;
+  background: #f4f6fb;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  background: #2557d6;
+  border: 0;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.7rem 1rem;
+}
+
+button.secondary {
+  background: #e8edf9;
+  color: #1d2a44;
+}
+
+.app-header {
+  align-items: center;
+  background: #101828;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  padding: 1.5rem 2rem;
+}
+
+.app-header h1 {
+  margin: 0.2rem 0 0;
+}
+
+.eyebrow {
+  color: #9db7ff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.health {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+}
+
+.layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 360px 1fr;
+  padding: 1rem;
+}
+
+.card {
+  background: white;
+  border: 1px solid #dde4f0;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(31, 42, 68, 0.08);
+  padding: 1rem;
+}
+
+.sidebar {
+  display: grid;
+  gap: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.8rem 0;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid #ccd5e6;
+  border-radius: 10px;
+  padding: 0.65rem;
+  width: 100%;
+}
+
+textarea {
+  min-height: 230px;
+}
+
+.jobs-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.job-item {
+  border: 1px solid #d9e2f0;
+  border-radius: 14px;
+  cursor: pointer;
+  padding: 0.8rem;
+}
+
+.job-item:hover {
+  border-color: #2557d6;
+}
+
+.meta {
+  color: #637083;
+  font-size: 0.9rem;
+}
+
+.score {
+  border-radius: 999px;
+  color: white;
+  display: inline-block;
+  font-weight: 800;
+  padding: 0.25rem 0.55rem;
+}
+
+.score.high {
+  background: #168a4a;
+}
+
+.score.medium {
+  background: #b7791f;
+}
+
+.score.low {
+  background: #b83232;
+}
+
+.tabs,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.panel {
+  background: #f8faff;
+  border: 1px solid #e1e8f5;
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.split {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+pre {
+  white-space: pre-wrap;
+}
+
+.error {
+  color: #b83232;
+}
+
+@media (max-width: 900px) {
+  .layout,
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
