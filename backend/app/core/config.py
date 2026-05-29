@@ -20,6 +20,7 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="SUPABASE_SERVICE_KEY",
     )
+    database_url: str | None = Field(default=None, validation_alias="DATABASE_URL")
 
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     anthropic_model: str = Field(
@@ -57,6 +58,10 @@ class Settings(BaseSettings):
             and str(self.supabase_url) != "https://your-project.supabase.co/"
             and self._has_valid_supabase_service_key()
         )
+
+    @property
+    def database_configured(self) -> bool:
+        return self._has_real_secret(self.database_url)
 
     @property
     def anthropic_configured(self) -> bool:

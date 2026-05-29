@@ -15,13 +15,17 @@ from app.models import (
     StatusUpdate,
 )
 from app.services.ai import ApplicationWriter
+from app.services.postgres_repository import PostgresRepository
 from app.services.repository import SupabaseRepository
 
 router = APIRouter(prefix="/api")
 
 
-def get_repository() -> SupabaseRepository:
+def get_repository() -> SupabaseRepository | PostgresRepository:
+    settings = get_settings()
     try:
+        if settings.database_configured:
+            return PostgresRepository(settings)
         return SupabaseRepository()
     except RuntimeError as exc:
         raise HTTPException(
@@ -40,6 +44,7 @@ async def health(settings: Annotated[Settings, Depends(get_settings)]) -> dict[s
         "status": "ok",
         "environment": settings.app_env,
         "supabase_configured": settings.supabase_configured,
+        "database_configured": settings.database_configured,
         "anthropic_configured": settings.anthropic_configured,
         "perplexity_configured": settings.perplexity_configured,
         "scheduler_enabled": settings.scheduler_enabled,

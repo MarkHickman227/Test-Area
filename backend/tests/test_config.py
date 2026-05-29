@@ -29,3 +29,15 @@ def test_supabase_health_accepts_matching_service_role_key():
     )
 
     assert settings.supabase_configured is True
+
+
+def test_database_url_is_detected():
+    settings = Settings(
+        SUPABASE_URL="https://newproject.supabase.co",
+        SUPABASE_SERVICE_KEY="replace-with-service-role-key",
+        DATABASE_URL="postgresql://postgres.example:secret@pooler.supabase.com:6543/postgres",
+        ANTHROPIC_API_KEY="replace-with-anthropic-api-key",
+        PERPLEXITY_API_KEY="replace-with-perplexity-api-key",
+    )
+
+    assert settings.database_configured is True

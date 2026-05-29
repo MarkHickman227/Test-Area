@@ -16,7 +16,7 @@ ApplyPilot never submits applications automatically. The dashboard is the final 
 
 1. Create a Supabase project.
 2. Run `db/schema.sql`, then `db/schema_functions.sql` in the Supabase SQL editor.
-3. Copy `config/.env.example` to `config/.env` and fill in the required keys.
+3. Copy `config/.env.example` to `config/.env` and fill in the required keys. Use either `SUPABASE_SERVICE_KEY` for Supabase REST access or `DATABASE_URL` for direct Postgres access through the Supabase pooler.
 4. Start the app:
 
 ```bash

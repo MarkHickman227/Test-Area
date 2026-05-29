@@ -34,7 +34,7 @@ You can run ApplyPilot for a small monthly VPS cost plus API usage if you proces
 ### Installation
 
 1. Set up Supabase: create a project, open SQL Editor, run `db/schema.sql`, then run `db/schema_functions.sql`. Copy your Project URL and `service_role` key from Settings > API.
-2. Configure your environment: copy `config/.env.example` to `config/.env` and fill in `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `ANTHROPIC_API_KEY`, `PERPLEXITY_API_KEY`, and optional Telegram settings.
+2. Configure your environment: copy `config/.env.example` to `config/.env` and fill in `SUPABASE_URL`, `ANTHROPIC_API_KEY`, `PERPLEXITY_API_KEY`, and optional Telegram settings. For database access, use either `SUPABASE_SERVICE_KEY` or `DATABASE_URL` from the Supabase connection pooler.
 3. Deploy with Docker: run `docker compose up --build -d`.
 4. Verify the app: open your server IP address or domain and confirm that the dashboard loads.
 5. Complete onboarding: register your account, upload CVs, and complete preferences.
