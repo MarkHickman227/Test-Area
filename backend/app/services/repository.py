@@ -11,7 +11,7 @@ from app.models import ApplicationStatus, JobDetail, JobSummary, JobType, Prefer
 class SupabaseRepository:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
-        if not self.settings.supabase_rest_url or not self.settings.supabase_service_key:
+        if not self.settings.supabase_configured:
             raise RuntimeError("Supabase URL and service role key are required")
 
     @property

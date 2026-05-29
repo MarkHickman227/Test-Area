@@ -12,7 +12,7 @@ class ApplicationWriter:
         self.settings = settings or get_settings()
 
     async def regenerate(self, job: JobDetail, artifact: str, notes: str | None = None) -> Any:
-        if not self.settings.anthropic_api_key:
+        if not self.settings.anthropic_configured:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="ANTHROPIC_API_KEY is required to regenerate artifacts",

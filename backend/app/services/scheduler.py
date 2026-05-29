@@ -38,7 +38,7 @@ class DiscoveryScheduler:
                 continue
 
     async def run_once(self) -> None:
-        if not self.settings.perplexity_api_key:
+        if not self.settings.perplexity_configured:
             logger.info("Skipping discovery because PERPLEXITY_API_KEY is not configured")
             return
         try:

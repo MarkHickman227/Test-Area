@@ -39,9 +39,9 @@ async def health(settings: Annotated[Settings, Depends(get_settings)]) -> dict[s
     return {
         "status": "ok",
         "environment": settings.app_env,
-        "supabase_configured": bool(settings.supabase_url and settings.supabase_service_key),
-        "anthropic_configured": bool(settings.anthropic_api_key),
-        "perplexity_configured": bool(settings.perplexity_api_key),
+        "supabase_configured": settings.supabase_configured,
+        "anthropic_configured": settings.anthropic_configured,
+        "perplexity_configured": settings.perplexity_configured,
         "scheduler_enabled": settings.scheduler_enabled,
     }
 

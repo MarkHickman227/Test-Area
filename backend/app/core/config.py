@@ -48,10 +48,33 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.api_cors_origins.split(",") if origin.strip()]
 
     @property
+    def supabase_configured(self) -> bool:
+        return bool(
+            self.supabase_url
+            and str(self.supabase_url) != "https://your-project.supabase.co/"
+            and self._has_real_secret(self.supabase_service_key)
+        )
+
+    @property
+    def anthropic_configured(self) -> bool:
+        return self._has_real_secret(self.anthropic_api_key)
+
+    @property
+    def perplexity_configured(self) -> bool:
+        return self._has_real_secret(self.perplexity_api_key)
+
+    @property
     def supabase_rest_url(self) -> str | None:
-        if not self.supabase_url:
+        if not self.supabase_configured:
             return None
         return f"{str(self.supabase_url).rstrip('/')}/rest/v1"
+
+    @staticmethod
+    def _has_real_secret(value: str | None) -> bool:
+        if not value:
+            return False
+        normalized = value.strip().lower()
+        return bool(normalized and not normalized.startswith("replace-with"))
 
 
 @lru_cache
