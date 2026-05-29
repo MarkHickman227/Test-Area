@@ -1,0 +1,31 @@
+from app.core.config import Settings
+
+
+def test_supabase_health_rejects_mismatched_service_role_key():
+    settings = Settings(
+        SUPABASE_URL="https://newproject.supabase.co",
+        SUPABASE_SERVICE_KEY=(
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+            "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sZHByb2plY3QiLCJyb2xlIjoic2VydmljZV9yb2xlIn0."
+            "signature"
+        ),
+        ANTHROPIC_API_KEY="replace-with-anthropic-api-key",
+        PERPLEXITY_API_KEY="replace-with-perplexity-api-key",
+    )
+
+    assert settings.supabase_configured is False
+
+
+def test_supabase_health_accepts_matching_service_role_key():
+    settings = Settings(
+        SUPABASE_URL="https://newproject.supabase.co",
+        SUPABASE_SERVICE_KEY=(
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+            "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ld3Byb2plY3QiLCJyb2xlIjoic2VydmljZV9yb2xlIn0."
+            "signature"
+        ),
+        ANTHROPIC_API_KEY="replace-with-anthropic-api-key",
+        PERPLEXITY_API_KEY="replace-with-perplexity-api-key",
+    )
+
+    assert settings.supabase_configured is True

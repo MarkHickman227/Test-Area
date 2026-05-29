@@ -1,4 +1,7 @@
+import base64
+import json
 from functools import lru_cache
+from urllib.parse import urlparse
 
 from pydantic import AnyHttpUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -52,7 +55,7 @@ class Settings(BaseSettings):
         return bool(
             self.supabase_url
             and str(self.supabase_url) != "https://your-project.supabase.co/"
-            and self._has_real_secret(self.supabase_service_key)
+            and self._has_valid_supabase_service_key()
         )
 
     @property
@@ -69,12 +72,52 @@ class Settings(BaseSettings):
             return None
         return f"{str(self.supabase_url).rstrip('/')}/rest/v1"
 
+    @property
+    def supabase_project_ref(self) -> str | None:
+        if not self.supabase_url:
+            return None
+        host = urlparse(str(self.supabase_url)).hostname or ""
+        suffix = ".supabase.co"
+        if not host.endswith(suffix):
+            return None
+        return host.removesuffix(suffix)
+
     @staticmethod
     def _has_real_secret(value: str | None) -> bool:
         if not value:
             return False
         normalized = value.strip().lower()
         return bool(normalized and not normalized.startswith("replace-with"))
+
+    def _has_valid_supabase_service_key(self) -> bool:
+        if not self._has_real_secret(self.supabase_service_key):
+            return False
+        key = (self.supabase_service_key or "").strip()
+        if key.startswith("sb_secret_"):
+            return True
+
+        payload = self._decode_jwt_payload(key)
+        if not payload:
+            return False
+        if payload.get("role") != "service_role":
+            return False
+
+        key_ref = payload.get("ref")
+        project_ref = self.supabase_project_ref
+        return bool(key_ref and project_ref and key_ref == project_ref)
+
+    @staticmethod
+    def _decode_jwt_payload(token: str) -> dict[str, object] | None:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return None
+        try:
+            padded = parts[1] + "=" * (-len(parts[1]) % 4)
+            decoded = base64.urlsafe_b64decode(padded.encode("ascii"))
+            payload = json.loads(decoded)
+        except (ValueError, json.JSONDecodeError):
+            return None
+        return payload if isinstance(payload, dict) else None
 
 
 @lru_cache
