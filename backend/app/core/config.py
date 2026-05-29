@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     anthropic_model: str = Field(
-        default="claude-3-5-sonnet-latest",
+        default="claude-sonnet-4-6",
         validation_alias="ANTHROPIC_MODEL",
     )
 
