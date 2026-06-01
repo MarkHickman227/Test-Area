@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 import httpx
 
 from app.core.config import settings
@@ -16,8 +18,7 @@ def get_auth_url(state: str = "random_state") -> str:
         "state": state,
         "scope": "openid profile w_member_social",
     }
-    query = "&".join(f"{k}={v}" for k, v in params.items())
-    return f"{AUTHORIZE_URL}?{query}"
+    return f"{AUTHORIZE_URL}?{urlencode(params)}"
 
 
 async def exchange_code_for_token(code: str) -> dict:
