@@ -23,7 +23,7 @@ ApplyPilot never submits applications automatically. The dashboard is the final 
 docker compose up --build -d
 ```
 
-5. Open `http://localhost` and complete onboarding.
+5. Open `http://localhost:8765` and complete onboarding.
 
 ## Local backend development
 

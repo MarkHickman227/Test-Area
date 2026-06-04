@@ -16,5 +16,5 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "8765:80"
     restart: unless-stopped
