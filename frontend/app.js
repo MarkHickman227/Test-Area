@@ -27,7 +27,8 @@ async function request(path, options = {}) {
 async function loadHealth() {
   try {
     const health = await request("/health");
-    fields.health.textContent = `API ready | Supabase ${health.supabase_configured ? "on" : "off"}`;
+    const dataStoreReady = health.supabase_configured || health.database_configured;
+    fields.health.textContent = `API ready | Data store ${dataStoreReady ? "on" : "off"}`;
   } catch (error) {
     fields.health.textContent = "API unavailable";
     fields.health.classList.add("error");
