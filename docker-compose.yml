@@ -1,0 +1,41 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  web:
+    build: .
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DATABASE_URL: sqlite:////app/data/linkedin_agent.db
+    depends_on:
+      - redis
+    ports:
+      - "${HOST_PORT:-80}:8000"
+    restart: unless-stopped
+    volumes:
+      - linkedin-agent-data:/app/data
+
+  worker:
+    build: .
+    command: celery -A app.core.celery_app.celery_app worker --loglevel=INFO
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DATABASE_URL: sqlite:////app/data/linkedin_agent.db
+    depends_on:
+      - redis
+      - web
+    restart: unless-stopped
+    volumes:
+      - linkedin-agent-data:/app/data
+
+volumes:
+  linkedin-agent-data:
