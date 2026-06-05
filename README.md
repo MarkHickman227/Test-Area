@@ -28,7 +28,13 @@ In the LinkedIn Developer Portal:
 
 1. Create or open your app.
 2. Add the product/API access that allows posting with `w_member_social`.
-3. Add this OAuth redirect URL for local Docker:
+3. Add this OAuth redirect URL for local Docker using the default port:
+
+   ```text
+   http://localhost/auth/callback
+   ```
+
+   If you set `HOST_PORT=8000`, use:
 
    ```text
    http://localhost:8000/auth/callback
@@ -56,16 +62,18 @@ Edit `.env`:
 APP_ENV=production
 DEBUG=False
 LOG_LEVEL=INFO
+HOST_PORT=80
 
 LINKEDIN_CLIENT_ID=your-client-id
 LINKEDIN_CLIENT_SECRET=your-client-secret
-LINKEDIN_REDIRECT_URI=http://localhost:8000/auth/callback
+LINKEDIN_REDIRECT_URI=http://localhost/auth/callback
 LINKEDIN_SCOPES=openid profile w_member_social
 
 SESSION_COOKIE_SECURE=False
 ```
 
 Set `SESSION_COOKIE_SECURE=True` when serving the app over HTTPS.
+Set `HOST_PORT=8000` if port 80 is already used on your machine.
 
 By default, standalone Docker deployment uses SQLite in a Docker volume:
 
@@ -85,7 +93,7 @@ docker compose up --build -d
 Open:
 
 ```text
-http://localhost:8000
+http://localhost
 ```
 
 Check status:
@@ -95,6 +103,18 @@ docker compose ps
 docker compose logs web
 docker compose logs worker
 ```
+
+If the site is not reachable:
+
+```bash
+docker compose ps
+docker compose logs web
+curl -I http://localhost
+```
+
+On a VPS, confirm port 80 is allowed by the server firewall/security group. If
+you use a non-default port, set `HOST_PORT=8000`, redeploy, and open
+`http://your-server-ip:8000`.
 
 The Compose stack includes:
 
