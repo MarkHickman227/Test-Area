@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ApplyPilot</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">ApplyPilot</p>
+        <h1>Job application review dashboard</h1>
+      </div>
+      <div id="health" class="health">Checking API...</div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="card">
+          <h2>Filters</h2>
+          <label>Status
+            <select id="status-filter">
+              <option value="">All</option>
+              <option>NEW</option>
+              <option>DRAFT</option>
+              <option>READY</option>
+              <option>SUBMITTED</option>
+              <option>INTERVIEW</option>
+              <option>OFFER</option>
+              <option>REJECTED</option>
+            </select>
+          </label>
+          <label>Type
+            <select id="type-filter">
+              <option value="">All</option>
+              <option value="PERM">Permanent</option>
+              <option value="CONTRACT">Contract</option>
+            </select>
+          </label>
+          <label>Minimum score
+            <input id="score-filter" type="number" min="0" max="100" placeholder="60" />
+          </label>
+          <button id="refresh">Refresh jobs</button>
+        </section>
+
+        <section class="card jobs-card">
+          <h2>Jobs</h2>
+          <div id="jobs" class="jobs-list">Loading jobs...</div>
+        </section>
+      </aside>
+
+      <section id="detail" class="detail card">
+        <h2>Select a job</h2>
+        <p>Choose a scored opportunity to review the job description, fit explanation, and application artifacts.</p>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

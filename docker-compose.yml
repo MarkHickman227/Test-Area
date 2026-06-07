@@ -1,0 +1,20 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: applypilot-backend
+    env_file:
+      - ./config/.env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: applypilot-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8765:80"
+    restart: unless-stopped
