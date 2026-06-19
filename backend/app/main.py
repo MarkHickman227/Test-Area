@@ -1,13 +1,18 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.cv_routes import router as cv_router
 from app.api.routes import router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.services.scheduler import DiscoveryScheduler
+
+_FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
 
 @asynccontextmanager
@@ -33,7 +38,19 @@ def create_app() -> FastAPI:
     )
     app.include_router(router)
     app.include_router(cv_router)
+    _mount_frontend(app)
     return app
+
+
+def _mount_frontend(app: FastAPI) -> None:
+    if not _FRONTEND_DIR.is_dir():
+        return
+
+    @app.get("/", include_in_schema=False)
+    async def serve_index():
+        return FileResponse(_FRONTEND_DIR / "index.html")
+
+    app.mount("/", StaticFiles(directory=_FRONTEND_DIR), name="frontend")
 
 
 app = create_app()
