@@ -12,7 +12,20 @@ from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.services.scheduler import DiscoveryScheduler
 
-_FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+
+def _find_frontend_dir() -> Path | None:
+    candidates = [
+        Path(__file__).resolve().parents[2] / "frontend",
+        Path.cwd() / "frontend",
+        Path.cwd().parent / "frontend",
+    ]
+    for candidate in candidates:
+        if candidate.is_dir() and (candidate / "index.html").exists():
+            return candidate
+    return None
+
+
+_FRONTEND_DIR = _find_frontend_dir()
 
 
 @asynccontextmanager
@@ -43,7 +56,7 @@ def create_app() -> FastAPI:
 
 
 def _mount_frontend(app: FastAPI) -> None:
-    if not _FRONTEND_DIR.is_dir():
+    if _FRONTEND_DIR is None:
         return
 
     @app.get("/", include_in_schema=False)
