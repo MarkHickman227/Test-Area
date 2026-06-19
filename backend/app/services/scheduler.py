@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from app.core.config import Settings, get_settings
+from app.services.pipeline import Pipeline
 from app.services.repository import SupabaseRepository
 
 logger = logging.getLogger(__name__)
@@ -51,8 +52,12 @@ class DiscoveryScheduler:
         if not preferences:
             logger.info("Skipping discovery because preferences have not been saved")
             return
+
         logger.info(
-            "Discovery is configured for %s titles across %s locations",
+            "Starting discovery for %s titles across %s locations",
             len(preferences.target_titles),
             len(preferences.locations),
         )
+        pipeline = Pipeline(self.settings)
+        stats = await pipeline.run(repository, preferences)
+        logger.info("Discovery cycle finished: %s", stats)

@@ -75,7 +75,7 @@ function renderDetail() {
   const tabValue = tabContent(selectedJob, activeTab);
   fields.detail.innerHTML = `
     <h2>${escapeHtml(selectedJob.title)}</h2>
-    <p class="meta">${escapeHtml([selectedJob.company, selectedJob.location, selectedJob.job_type].filter(Boolean).join(" | "))}</p>
+    <p class="meta">${escapeHtml([selectedJob.company, selectedJob.location, selectedJob.job_type].filter(Boolean).join(" | "))}${selectedJob.source_url ? ` | <a href="${escapeHtml(selectedJob.source_url)}" target="_blank" rel="noopener">Open original</a>` : ""}</p>
     <p><strong>Status:</strong> <span class="status-pill">${selectedJob.status}</span></p>
     ${notice ? `<p class="notice">${escapeHtml(notice)}</p>` : ""}
     <div class="actions">
@@ -142,12 +142,18 @@ function tabContent(job, tab) {
 function renderRecruiterPanel(job) {
   if (!job.agency && !job.recruiter_outreach) return "";
   const outreach = job.recruiter_outreach || {};
+  const emailSent = outreach.email_sent ? "Sent" : "Not sent";
+  const linkedinSent = outreach.linkedin_sent ? "Sent" : "Not sent";
   return `
     <section class="panel">
       <h3>Recruiter outreach</h3>
-      <p><strong>Agency:</strong> ${escapeHtml(outreach.agency_name || "Unknown")}</p>
+      <p><strong>Agency:</strong> ${escapeHtml(outreach.agency_name || "Unknown")}
+        ${outreach.contact_name ? ` | <strong>Contact:</strong> ${escapeHtml(outreach.contact_name)}` : ""}
+        ${outreach.contact_email ? ` | ${escapeHtml(outreach.contact_email)}` : ""}</p>
+      <p class="meta">Email: ${emailSent} | LinkedIn: ${linkedinSent}</p>
       <pre>${escapeHtml(outreach.email_body || "No recruiter email drafted yet.")}</pre>
-      <pre>${escapeHtml(outreach.linkedin_note || "")}</pre>
+      ${outreach.email_body ? `<button class="secondary" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent)">Copy email</button>` : ""}
+      ${outreach.linkedin_note ? `<pre>${escapeHtml(outreach.linkedin_note)}</pre><button class="secondary" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent)">Copy LinkedIn note</button>` : ""}
     </section>`;
 }
 

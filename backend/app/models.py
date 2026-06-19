@@ -70,3 +70,18 @@ class Preferences(BaseModel):
     job_types: list[JobType] = Field(default_factory=list)
     industries: list[str] = Field(default_factory=list)
     seniority_level: str | None = None
+
+
+class CvRecord(BaseModel):
+    id: UUID
+    label: str
+    file_name: str
+    raw_text: str = ""
+    parsed_profile: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime | None = None
+
+
+class CvCreateRequest(BaseModel):
+    label: str = Field(min_length=1, max_length=100)
+    file_name: str = Field(min_length=1)
+    raw_text: str = Field(min_length=1)

@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -5,7 +6,9 @@ import httpx
 from fastapi import HTTPException, status
 
 from app.core.config import Settings, get_settings
-from app.models import ApplicationStatus, JobDetail, JobSummary, JobType, Preferences
+from app.models import ApplicationStatus, CvRecord, JobDetail, JobSummary, JobType, Preferences
+
+logger = logging.getLogger(__name__)
 
 
 class SupabaseRepository:
@@ -120,6 +123,65 @@ class SupabaseRepository:
     async def save_preferences(self, preferences: Preferences) -> Preferences:
         await self._request("POST", "user_preferences", json=preferences.model_dump(mode="json"))
         return preferences
+
+    async def insert_job(self, job: dict[str, Any]) -> dict[str, Any] | None:
+        headers = {**self.headers, "Prefer": "return=representation,resolution=ignore-duplicates"}
+        url = f"{self.settings.supabase_rest_url}/jobs"
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.post(url, headers=headers, json=job)
+        if resp.status_code >= 400:
+            logger.warning("Failed to insert job %s: %s", job.get("title"), resp.text)
+            return None
+        rows = resp.json() if resp.content else []
+        return rows[0] if rows else None
+
+    async def update_job_fields(self, job_id: str, fields: dict[str, Any]) -> None:
+        await self._request("PATCH", "jobs", params={"id": f"eq.{job_id}"}, json=fields)
+
+    async def insert_artifact(self, job_id: str, artifact_type: str, content: Any) -> None:
+        await self._request(
+            "POST",
+            "application_artifacts",
+            json={"job_id": job_id, "artifact_type": artifact_type, "content": content},
+        )
+
+    async def insert_recruiter_outreach(self, job_id: str, email_body: str) -> None:
+        headers = {**self.headers, "Prefer": "return=representation,resolution=ignore-duplicates"}
+        url = f"{self.settings.supabase_rest_url}/recruiter_outreach"
+        payload = {"job_id": job_id, "email_body": email_body}
+        async with httpx.AsyncClient(timeout=20) as client:
+            await client.post(url, headers=headers, json=payload)
+
+    async def get_best_cv(self) -> dict[str, Any] | None:
+        rows = await self._request(
+            "GET",
+            "cvs",
+            params={"select": "id,label,parsed_profile", "order": "created_at.desc", "limit": "1"},
+        )
+        return rows[0] if rows else None
+
+    async def list_cvs(self) -> list[CvRecord]:
+        rows = await self._request(
+            "GET", "cvs", params={"select": "*", "order": "created_at.desc"}
+        )
+        return [CvRecord.model_validate(r) for r in rows]
+
+    async def create_cv(self, data: dict[str, Any]) -> CvRecord:
+        rows = await self._request("POST", "cvs", json=data)
+        return CvRecord.model_validate(rows[0])
+
+    async def delete_cv(self, cv_id: UUID) -> None:
+        await self._request("DELETE", "cvs", params={"id": f"eq.{cv_id}"})
+
+    async def get_status_counts(self) -> dict[str, int]:
+        rows = await self._request(
+            "GET", "jobs", params={"select": "status"}
+        )
+        counts: dict[str, int] = {}
+        for row in rows:
+            s = row.get("status", "UNKNOWN")
+            counts[s] = counts.get(s, 0) + 1
+        return counts
 
     async def _request(
         self,

@@ -1,0 +1,24 @@
+name: job_scorer
+version: 1
+description: Scores jobs against a CV and preferences, returning a 0-100 suitability score
+input: parsed_requirements, cv_profile, preferences
+output: score (0-100), explanation, strengths, gaps
+provider: anthropic
+model: claude-sonnet-4-6
+max_tokens: 1200
+prompt_template: |
+  You are a job-matching engine. Compare this job against the candidate profile
+  and return ONLY a JSON object with:
+  - score: integer 0-100 representing suitability
+  - explanation: one paragraph explaining strengths and gaps
+  - strengths: list of matching strengths
+  - gaps: list of missing requirements
+
+  JOB REQUIREMENTS:
+  {requirements}
+
+  CANDIDATE PROFILE:
+  {profile}
+
+  CANDIDATE PREFERENCES:
+  {preferences}
