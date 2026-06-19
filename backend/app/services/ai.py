@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import httpx
@@ -5,6 +6,8 @@ from fastapi import HTTPException, status
 
 from app.core.config import Settings, get_settings
 from app.models import JobDetail
+
+logger = logging.getLogger(__name__)
 
 
 class ApplicationWriter:
@@ -19,6 +22,27 @@ class ApplicationWriter:
             )
 
         prompt = self._build_prompt(job, artifact, notes)
+        return await self._call_anthropic(prompt)
+
+    async def generate_artifacts(self, job: dict[str, Any]) -> dict[str, Any]:
+        if not self.settings.anthropic_configured:
+            logger.info("Skipping artifact generation — ANTHROPIC_API_KEY not set")
+            return {}
+
+        artifacts: dict[str, Any] = {}
+        for artifact_type in ("cover_letter", "cv_summary", "screening_answers"):
+            prompt = self._build_pipeline_prompt(job, artifact_type)
+            content = await self._call_anthropic(prompt)
+            if content:
+                artifacts[artifact_type] = content
+        if job.get("agency"):
+            prompt = self._build_pipeline_prompt(job, "recruiter_outreach")
+            content = await self._call_anthropic(prompt)
+            if content:
+                artifacts["recruiter_outreach"] = content
+        return artifacts
+
+    async def _call_anthropic(self, prompt: str) -> str:
         payload = {
             "model": self.settings.anthropic_model,
             "max_tokens": 1800,
@@ -43,12 +67,7 @@ class ApplicationWriter:
 
     @staticmethod
     def _build_prompt(job: JobDetail, artifact: str, notes: str | None) -> str:
-        guidance = {
-            "cv_summary": "Write a concise tailored CV headline and profile summary.",
-            "cover_letter": "Write a specific, human-editable cover letter for this role.",
-            "screening_answers": "Draft likely screening question answers using the available role context.",
-            "recruiter_outreach": "Draft a short recruiter outreach email for an agency-listed role.",
-        }[artifact]
+        guidance = _ARTIFACT_GUIDANCE[artifact]
         return (
             f"{guidance}\n\n"
             "Keep claims grounded in the supplied CV summary and job details. "
@@ -62,3 +81,26 @@ class ApplicationWriter:
             f"Job description:\n{job.description or 'Not available'}\n\n"
             f"Reviewer notes: {notes or 'None'}"
         )
+
+    @staticmethod
+    def _build_pipeline_prompt(job: dict[str, Any], artifact: str) -> str:
+        guidance = _ARTIFACT_GUIDANCE[artifact]
+        return (
+            f"{guidance}\n\n"
+            "Keep claims grounded in the job details. "
+            "Do not invent experience or credentials.\n\n"
+            f"Job title: {job.get('title', 'Unknown')}\n"
+            f"Company: {job.get('company') or 'Unknown'}\n"
+            f"Location: {job.get('location') or 'Unknown'}\n"
+            f"Score explanation: {job.get('score_explanation') or 'Not available'}\n"
+            f"Parsed requirements: {job.get('parsed_requirements', {})}\n"
+            f"Job description:\n{job.get('description') or 'Not available'}"
+        )
+
+
+_ARTIFACT_GUIDANCE: dict[str, str] = {
+    "cv_summary": "Write a concise tailored CV headline and profile summary.",
+    "cover_letter": "Write a specific, human-editable cover letter for this role.",
+    "screening_answers": "Draft likely screening question answers using the available role context.",
+    "recruiter_outreach": "Draft a short recruiter outreach email for an agency-listed role.",
+}

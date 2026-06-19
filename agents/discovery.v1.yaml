@@ -1,0 +1,21 @@
+name: discovery
+version: 1
+description: Searches for job postings matching user preferences via Perplexity AI
+input: target_titles, locations, seniority_level, job_types, industries, salary_min
+output: JSON array of job objects with title, company, location, salary_text, description, source_url, job_type
+provider: perplexity
+model: sonar-pro
+prompt_template: |
+  Search for recent job postings matching these criteria.
+  Return ONLY a JSON array of objects with these exact keys:
+  title, company, location, salary_text, description, source_url, job_type.
+  Each object represents one real job posting.
+  Return between 3 and 10 results. No commentary outside the JSON array.
+
+  Search criteria:
+  - Titles: {titles}
+  - Locations: {locations}
+  - Seniority: {seniority}
+  - Job types: {job_types}
+  - Industries: {industries}
+  {salary_line}

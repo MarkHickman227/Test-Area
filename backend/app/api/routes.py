@@ -100,6 +100,21 @@ async def save_artifact(
     return await repository.save_artifact(job_id, request.artifact, request.content)
 
 
+@router.get("/analytics")
+async def get_analytics(
+    repository: Annotated[SupabaseRepository, Depends(get_repository)],
+) -> dict[str, object]:
+    counts = await repository.get_status_counts()
+    total = sum(counts.values())
+    return {
+        "total_jobs": total,
+        "status_counts": counts,
+        "submitted": counts.get("SUBMITTED", 0),
+        "interviews": counts.get("INTERVIEW", 0),
+        "offers": counts.get("OFFER", 0),
+    }
+
+
 @router.get("/preferences")
 async def get_preferences(
     repository: Annotated[SupabaseRepository, Depends(get_repository)],

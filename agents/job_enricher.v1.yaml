@@ -1,0 +1,23 @@
+name: job_enricher
+version: 1
+description: Extracts structured requirements from a job description
+input: title, company, description
+output: required_skills, nice_to_have_skills, experience_years, domain_knowledge, certifications, seniority, keywords
+provider: anthropic
+model: claude-sonnet-4-6
+max_tokens: 1200
+prompt_template: |
+  Analyse this job description and return ONLY a JSON object with these keys:
+  - required_skills: list of must-have skills
+  - nice_to_have_skills: list of nice-to-have skills
+  - experience_years: integer or null
+  - domain_knowledge: list of relevant domains
+  - certifications: list of required/preferred certifications
+  - seniority: one of junior/mid/senior/lead/director/executive or null
+  - keywords: list of important keywords for matching
+
+  Job title: {title}
+  Company: {company}
+
+  Description:
+  {description}

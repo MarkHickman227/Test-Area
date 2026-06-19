@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.cv_routes import router as cv_router
 from app.api.routes import router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(router)
+    app.include_router(cv_router)
     return app
 
 

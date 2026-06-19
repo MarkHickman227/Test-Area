@@ -72,6 +72,9 @@ class FakeRepository:
         self.preferences = preferences
         return preferences
 
+    async def get_status_counts(self):
+        return {"DRAFT": 1}
+
 
 class FakeWriter:
     async def regenerate(self, job, artifact, notes=None):
@@ -114,6 +117,17 @@ def test_review_workflow_updates_status_and_regenerates_artifact():
     assert regenerate_response.status_code == 200
     assert "Regenerated cover_letter" in regenerate_response.json()["cover_letter"]
     assert repository.job.status == ApplicationStatus.draft
+
+
+def test_analytics_returns_status_counts():
+    client, _ = make_client()
+
+    response = client.get("/api/analytics")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_jobs"] == 1
+    assert data["status_counts"]["DRAFT"] == 1
 
 
 def test_preferences_can_be_saved():
