@@ -1,42 +1,26 @@
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
+from app.api.deps import get_repository
 from app.models import CvCreateRequest, CvRecord
-from app.services.repository import SupabaseRepository
 
 router = APIRouter(prefix="/api")
 
-
-def get_repository() -> SupabaseRepository:
-    try:
-        return SupabaseRepository()
-    except RuntimeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
+Repo = Annotated[Any, Depends(get_repository)]
 
 
 @router.get("/cvs", response_model=list[CvRecord])
-async def list_cvs(
-    repository: Annotated[SupabaseRepository, Depends(get_repository)],
-) -> list[CvRecord]:
+async def list_cvs(repository: Repo) -> list[CvRecord]:
     return await repository.list_cvs()
 
 
 @router.post("/cvs", response_model=CvRecord, status_code=status.HTTP_201_CREATED)
-async def create_cv(
-    request: CvCreateRequest,
-    repository: Annotated[SupabaseRepository, Depends(get_repository)],
-) -> CvRecord:
+async def create_cv(request: CvCreateRequest, repository: Repo) -> CvRecord:
     return await repository.create_cv(request.model_dump(mode="json"))
 
 
 @router.delete("/cvs/{cv_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_cv(
-    cv_id: UUID,
-    repository: Annotated[SupabaseRepository, Depends(get_repository)],
-) -> None:
+async def delete_cv(cv_id: UUID, repository: Repo) -> None:
     await repository.delete_cv(cv_id)

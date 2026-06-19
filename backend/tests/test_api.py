@@ -2,7 +2,8 @@ from uuid import UUID
 
 from fastapi.testclient import TestClient
 
-from app.api.routes import get_repository, get_writer
+from app.api.deps import get_repository
+from app.api.routes import get_writer
 from app.main import create_app
 from app.models import ApplicationStatus, JobDetail, JobSummary, Preferences
 
