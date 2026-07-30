@@ -1,11 +1,11 @@
 {
-  "install": "python3 -m venv .venv && .venv/bin/pip install -U pip && .venv/bin/pip install -r backend/requirements.txt -r backend/requirements-dev.txt",
+  "install": "sudo apt-get update -qq && sudo apt-get install -y -qq python3-venv python3-pip >/dev/null && python3 -m venv .venv && .venv/bin/pip install -U pip && .venv/bin/pip install -r backend/requirements.txt -r backend/requirements-dev.txt",
   "start": "true",
   "terminals": [
     {
       "name": "applypilot",
-      "command": "test -f config/.env || cp config/.env.example config/.env; .venv/bin/python -c 'import uvicorn' && PYTHONPATH=backend .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir backend",
-      "description": "ApplyPilot API + dashboard on port 8000 (twice-daily scheduler enabled when secrets are present)"
+      "command": "test -f config/.env || cp config/.env.example config/.env; PYTHONPATH=backend .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir backend",
+      "description": "ApplyPilot API + dashboard on port 8000 with twice-daily scheduler"
     }
   ],
   "ports": [

@@ -12,15 +12,10 @@
         <p class="eyebrow">ApplyPilot</p>
         <h1>Job application review dashboard</h1>
       </div>
-      <nav class="header-nav">
-        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
-        <button class="nav-btn" data-view="analytics">Analytics</button>
-        <button class="nav-btn" data-view="cvs">CVs</button>
-      </nav>
       <div id="health" class="health">Checking API...</div>
     </header>
 
-    <main id="view-dashboard" class="layout">
+    <main class="layout">
       <aside class="sidebar">
         <section class="card">
           <h2>Filters</h2>
@@ -61,26 +56,6 @@
       </section>
     </main>
 
-    <main id="view-analytics" class="view-panel" style="display:none">
-      <section class="card">
-        <h2>Pipeline Analytics</h2>
-        <div id="analytics-content">Loading analytics...</div>
-      </section>
-    </main>
-
-    <main id="view-cvs" class="view-panel" style="display:none">
-      <section class="card">
-        <h2>CV Management</h2>
-        <div id="cv-list">Loading CVs...</div>
-        <h3>Upload new CV</h3>
-        <label>Label <input id="cv-label" type="text" placeholder="e.g. EA Focus" /></label>
-        <label>File name <input id="cv-filename" type="text" placeholder="cv_architecture.pdf" /></label>
-        <label>CV text <textarea id="cv-text" placeholder="Paste your CV text here..."></textarea></label>
-        <button id="cv-upload">Upload CV</button>
-      </section>
-    </main>
-
     <script src="/app.js"></script>
-    <script src="/extras.js"></script>
   </body>
 </html>
