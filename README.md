@@ -8,8 +8,10 @@ ApplyPilot never submits applications automatically. The dashboard is the final 
 
 - FastAPI backend with health checks, job review endpoints, status transitions, and AI generation hooks.
 - Static frontend dashboard for filtering jobs, reviewing generated artifacts, and updating pipeline status.
+- Twice-daily discovery scheduler with run locking and retries.
 - Supabase SQL schema and helper functions.
 - Docker Compose setup for the backend and frontend containers.
+- Cursor Cloud environment config (`.cursor/environment.json`) and automation runbook.
 - User guide in `docs/user-guide.md`.
 
 ## Quick start
@@ -24,6 +26,26 @@ docker compose up --build -d
 ```
 
 5. Open `http://localhost:8765` and complete onboarding.
+6. Save preferences in the dashboard so twice-daily discovery can run.
+
+## Twice-daily scheduling
+
+Default schedule: **08:00 and 20:00 Europe/London**.
+
+```env
+SCHEDULER_ENABLED=true
+DISCOVERY_SCHEDULE_MODE=twice_daily
+DISCOVERY_TIMES=08:00,20:00
+DISCOVERY_TIMEZONE=Europe/London
+```
+
+Manual trigger:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/pipeline/run
+```
+
+Full automation setup (VPS, Cursor Automations, GitHub Actions backup): see `docs/twice-daily-automation.md`.
 
 ## Local backend development
 
@@ -31,7 +53,7 @@ docker compose up --build -d
 python -m venv .venv
 . .venv/bin/activate
 pip install -r backend/requirements.txt -r backend/requirements-dev.txt
-uvicorn app.main:app --reload --app-dir backend
+PYTHONPATH=backend uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --app-dir backend
 ```
 
 ## Testing

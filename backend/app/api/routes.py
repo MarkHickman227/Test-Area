@@ -1,7 +1,7 @@
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 
 from app.api.deps import get_repository
 from app.core.config import Settings, get_settings
@@ -16,6 +16,7 @@ from app.models import (
     StatusUpdate,
 )
 from app.services.ai import ApplicationWriter
+from app.services.scheduler import DiscoveryScheduler
 
 router = APIRouter(prefix="/api")
 
@@ -26,18 +27,92 @@ def get_writer() -> ApplicationWriter:
     return ApplicationWriter()
 
 
+def _require_trigger_auth(
+    settings: Settings,
+    authorization: str | None,
+) -> None:
+    if not settings.trigger_token_configured:
+        return
+    expected = f"Bearer {settings.pipeline_trigger_token}"
+    if authorization != expected:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing pipeline trigger token",
+        )
+
+
+def _get_scheduler(request: Request) -> DiscoveryScheduler:
+    scheduler = getattr(request.app.state, "scheduler", None)
+    if scheduler is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Scheduler is not available",
+        )
+    return scheduler
+
+
 @router.get("/health")
-async def health(settings: Annotated[Settings, Depends(get_settings)]) -> dict[str, object]:
-    db_configured = settings.supabase_configured or getattr(settings, "database_configured", False)
-    return {
+async def health(
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> dict[str, object]:
+    db_configured = settings.supabase_configured or getattr(
+        settings, "database_configured", False
+    )
+    scheduler = getattr(request.app.state, "scheduler", None)
+    payload: dict[str, object] = {
         "status": "ok",
         "environment": settings.app_env,
-        "data_store": "supabase" if settings.supabase_configured else ("postgres" if getattr(settings, "database_configured", False) else "local"),
+        "data_store": (
+            "supabase"
+            if settings.supabase_configured
+            else (
+                "postgres"
+                if getattr(settings, "database_configured", False)
+                else "local"
+            )
+        ),
         "supabase_configured": settings.supabase_configured,
         "anthropic_configured": settings.anthropic_configured,
         "perplexity_configured": settings.perplexity_configured,
         "scheduler_enabled": settings.scheduler_enabled,
+        "discovery_schedule_mode": settings.discovery_schedule_mode,
+        "discovery_times": settings.discovery_time_list,
+        "discovery_timezone": settings.discovery_timezone,
+        "ready_for_discovery": bool(
+            settings.perplexity_configured
+            and db_configured
+            and settings.anthropic_configured
+        ),
     }
+    if scheduler is not None:
+        payload["scheduler"] = scheduler.status()
+    return payload
+
+
+@router.get("/scheduler/status")
+async def scheduler_status(request: Request) -> dict[str, object]:
+    return _get_scheduler(request).status()
+
+
+@router.post("/pipeline/run")
+async def run_pipeline(
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object]:
+    """Trigger one discovery cycle. Used by cron, VPS, and Cursor automations."""
+    _require_trigger_auth(settings, authorization)
+    scheduler = _get_scheduler(request)
+    result = await scheduler.run_once(trigger="api")
+    if result.get("status") == "rejected":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result)
+    if result.get("status") == "error":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=result,
+        )
+    return result
 
 
 @router.get("/jobs", response_model=list[JobSummary])

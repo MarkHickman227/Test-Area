@@ -1,3 +1,4 @@
+from contextlib import ExitStack
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -87,7 +88,11 @@ def make_client():
     repository = FakeRepository()
     app.dependency_overrides[get_repository] = lambda: repository
     app.dependency_overrides[get_writer] = lambda: FakeWriter()
-    return TestClient(app), repository
+    stack = ExitStack()
+    client = stack.enter_context(TestClient(app))
+    client._applypilot_stack = stack  # keep lifespan alive for the test
+    return client, repository
+
 
 
 def test_health_reports_configuration_state():
@@ -96,8 +101,29 @@ def test_health_reports_configuration_state():
     response = client.get("/api/health")
 
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
-    assert "supabase_configured" in response.json()
+    body = response.json()
+    assert body["status"] == "ok"
+    assert "supabase_configured" in body
+    assert body["discovery_schedule_mode"] == "twice_daily"
+    assert body["discovery_times"] == ["08:00", "20:00"]
+
+
+def test_pipeline_run_skips_without_credentials():
+    client, _ = make_client()
+
+    response = client.post("/api/pipeline/run")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "skipped"
+
+
+def test_scheduler_status_endpoint():
+    client, _ = make_client()
+
+    response = client.get("/api/scheduler/status")
+
+    assert response.status_code == 200
+    assert response.json()["mode"] == "twice_daily"
 
 
 def test_review_workflow_updates_status_and_regenerates_artifact():

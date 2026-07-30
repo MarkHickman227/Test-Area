@@ -35,10 +35,26 @@ class Settings(BaseSettings):
     telegram_chat_id: str | None = Field(default=None, validation_alias="TELEGRAM_CHAT_ID")
 
     scheduler_enabled: bool = Field(default=True, validation_alias="SCHEDULER_ENABLED")
+    discovery_schedule_mode: str = Field(
+        default="twice_daily",
+        validation_alias="DISCOVERY_SCHEDULE_MODE",
+    )
+    discovery_times: str = Field(
+        default="08:00,20:00",
+        validation_alias="DISCOVERY_TIMES",
+    )
+    discovery_timezone: str = Field(
+        default="Europe/London",
+        validation_alias="DISCOVERY_TIMEZONE",
+    )
     discovery_interval_minutes: int = Field(
-        default=150,
+        default=720,
         validation_alias="DISCOVERY_INTERVAL_MINUTES",
         ge=30,
+    )
+    pipeline_trigger_token: str | None = Field(
+        default=None,
+        validation_alias="PIPELINE_TRIGGER_TOKEN",
     )
 
     model_config = SettingsConfigDict(
@@ -70,6 +86,20 @@ class Settings(BaseSettings):
     @property
     def perplexity_configured(self) -> bool:
         return self._has_real_secret(self.perplexity_api_key)
+
+    @property
+    def discovery_time_list(self) -> list[str]:
+        return [chunk.strip() for chunk in self.discovery_times.split(",") if chunk.strip()]
+
+    @property
+    def parsed_discovery_times(self):
+        from app.services.schedule import parse_discovery_times
+
+        return parse_discovery_times(self.discovery_times)
+
+    @property
+    def trigger_token_configured(self) -> bool:
+        return self._has_real_secret(self.pipeline_trigger_token)
 
     @property
     def supabase_rest_url(self) -> str | None:
