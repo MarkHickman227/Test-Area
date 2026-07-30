@@ -122,7 +122,17 @@ class Settings(BaseSettings):
         if not value:
             return False
         normalized = value.strip().lower()
-        return bool(normalized and not normalized.startswith("replace-with"))
+        if not normalized or normalized.startswith("replace-with"):
+            return False
+        # Treat common .env.example placeholders as unconfigured.
+        placeholders = (
+            "your-project",
+            "project-ref",
+            "aws-0-region",
+            "replace-with-db-password",
+            "your-db-password",
+        )
+        return not any(token in normalized for token in placeholders)
 
     def _has_valid_supabase_service_key(self) -> bool:
         if not self._has_real_secret(self.supabase_service_key):

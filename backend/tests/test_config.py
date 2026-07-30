@@ -41,3 +41,14 @@ def test_database_url_is_detected():
     )
 
     assert settings.database_configured is True
+
+
+def test_placeholder_database_url_is_not_configured():
+    settings = Settings(
+        DATABASE_URL=(
+            "postgresql://postgres.project-ref:replace-with-db-password@"
+            "aws-0-region.pooler.supabase.com:6543/postgres?sslmode=require"
+        ),
+    )
+
+    assert settings.database_configured is False
