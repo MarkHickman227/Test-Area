@@ -58,3 +58,6 @@ def test_parse_salary():
     assert DiscoveryService._parse_salary("$100000") == {"salary_min": 100000, "salary_max": None}
     assert DiscoveryService._parse_salary("") == {"salary_min": None, "salary_max": None}
     assert DiscoveryService._parse_salary("Competitive") == {"salary_min": None, "salary_max": None}
+    assert DiscoveryService._parse_salary(None) == {"salary_min": None, "salary_max": None}
+    assert DiscoveryService._parse_salary("£90,000 - , DOE") == {"salary_min": 90000, "salary_max": None}
+    assert DiscoveryService._parse_salary(",") == {"salary_min": None, "salary_max": None}

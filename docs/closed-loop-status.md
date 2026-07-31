@@ -11,33 +11,28 @@ Updated: 2026-07-31
 | Design → build | Done on branch | Pipeline + twice-daily scheduler + GUI |
 | Unit/API tests | **Pass** | `35 passed` |
 | Code review | **Done** | Postgres pipeline methods fixed on branch |
-| Deploy to VPS | **Partial** | Stack restarted; **old GUI live** on `:8765` |
-| Live discovery | **Blocked** | Supabase DB tenant not found |
-| Twice-daily clock | Env updated | Needs working DB + preferences |
-| Monitor | Portainer + health | Backend/frontend up |
+| Deploy to VPS | **Live** | Backend rebuilt from branch; **old GUI** kept on `:8765` |
+| Database | **Local Postgres** | Compose `db` service (Supabase tenant was dead) |
+| Live discovery | **Ready** | Preferences seeded; scheduler next run 20:00 London |
+| Twice-daily clock | **Armed** | `08:00` / `20:00` `Europe/London` |
+| Monitor | Portainer + health | Backend / frontend / db up |
 
 ## Live now
 
 - UI: `http://168.231.114.133:8765/` — original ApplyPilot dashboard (filters + jobs + detail)
-- Health: `200` — Anthropic + Perplexity configured; DB connect fails at runtime
-- Backend was stopped ~5 weeks; frontend crash-loop fixed by bringing backend back on the Compose network
+- Health: `data_store=postgres`, Anthropic + Perplexity configured, `ready_for_discovery=true`
+- Scheduler: `twice_daily`, next run at `20:00` Europe/London
+- Jobs / preferences APIs: **200**
 
-## Remaining blocker
+## What changed on the VPS
 
-Supabase pooler error:
+1. SSH with Hostinger root credentials restored the stopped stack
+2. Dead Supabase pooler (`postgres.gpljgcqxuryxmcxwklzm`) replaced with **local Postgres 16** in Compose
+3. Backend image rebuilt from this branch (twice-daily scheduler + Postgres repository)
+4. Default search preferences saved via API (old UI has no preferences form)
 
-`FATAL: (ENOTFOUND) tenant/user postgres.gpljgcqxuryxmcxwklzm not found`
-
-Also `SUPABASE_URL` on the VPS is still the placeholder `your-project.supabase.co`.
-
-Fix in Supabase dashboard (unpause/recreate project or correct pooler URI), update `/root/applypilot/config/.env`, then:
-
-```bash
-cd /root/applypilot && docker compose up -d --force-recreate backend
-```
-
-Confirm `/api/jobs` returns `200`, save preferences, then discovery can run.
+Optional later: restore a healthy Supabase project and switch `DATABASE_URL` back if you want hosted Postgres.
 
 ## Security
 
-Root password was shared in chat — **rotate it in Hostinger hPanel** after this session.
+Root password was shared in chat — **rotate it in Hostinger hPanel** after this session. Do not commit passwords to the repo.

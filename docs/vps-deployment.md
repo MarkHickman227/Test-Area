@@ -8,9 +8,9 @@ AWS (`docs/aws-deployment.md`) is optional/future only.
 
 | Piece | How |
 |-------|-----|
-| App | Docker Compose (`backend` + `frontend`) from `applypilot-deployment.tar.gz` or this repo |
-| UI | Frontend on **8765** (nginx → backend `:8000`) |
-| Data | Supabase (`SUPABASE_*` or `DATABASE_URL` pooler) |
+| App | Docker Compose (`db` + `backend` + `frontend`) under `/root/applypilot` |
+| UI | Frontend on **8765** (nginx → backend `:8000`) — keep the original dashboard |
+| Data | **Local Postgres** in Compose (default). Optional: Supabase via `DATABASE_URL` / `SUPABASE_*` |
 | Schedule | In-app `twice_daily` at 08:00 / 20:00 `Europe/London` |
 | Ops UI | Portainer at `http://168.231.114.133:9000/` |
 | Backup clock | Host cron → `POST /api/pipeline/run` (only if in-app scheduler disabled) |
@@ -44,7 +44,8 @@ Public URL: `http://168.231.114.133:8765`
 
 | Variable | Purpose |
 |----------|---------|
-| `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` and/or `DATABASE_URL` | Persistence |
+| `DATABASE_URL` (or local Compose `db`) | Persistence — VPS uses local Postgres by default |
+| `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` | Optional hosted Supabase instead of local `db` |
 | `ANTHROPIC_API_KEY` | Scoring + artifacts |
 | `PERPLEXITY_API_KEY` | Discovery |
 | `PIPELINE_TRIGGER_TOKEN` | Optional auth for `/api/pipeline/run` |

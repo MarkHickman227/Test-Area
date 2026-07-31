@@ -1,10 +1,33 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: applypilot-db
+    environment:
+      POSTGRES_USER: applypilot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-applypilot}
+      POSTGRES_DB: applypilot
+    volumes:
+      - applypilot_pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./db/schema_functions.sql:/docker-entrypoint-initdb.d/02_schema_functions.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U applypilot -d applypilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
     container_name: applypilot-backend
     env_file:
       - ./config/.env
+    environment:
+      DATABASE_URL: postgresql://applypilot:${POSTGRES_PASSWORD:-applypilot}@db:5432/applypilot
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -18,3 +41,6 @@ services:
     ports:
       - "8765:80"
     restart: unless-stopped
+
+volumes:
+  applypilot_pgdata:

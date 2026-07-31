@@ -115,14 +115,14 @@ class DiscoveryService:
                 "agency": detect_agency(company=company, description=description),
                 "status": "NEW",
             }
-            salary = self._parse_salary(item.get("salary_text", ""))
+            salary = self._parse_salary(item.get("salary_text") or "")
             job.update(salary)
             jobs.append(job)
         return jobs
 
     @staticmethod
-    def _infer_job_type(explicit: str, description: str) -> str | None:
-        normalized = explicit.strip().upper()
+    def _infer_job_type(explicit: str | None, description: str) -> str | None:
+        normalized = (explicit or "").strip().upper()
         if normalized in ("PERM", "PERMANENT"):
             return "PERM"
         if normalized in ("CONTRACT", "FREELANCE", "FTC", "INTERIM"):
@@ -133,10 +133,15 @@ class DiscoveryService:
         return None
 
     @staticmethod
-    def _parse_salary(text: str) -> dict[str, int | None]:
+    def _parse_salary(text: str | None) -> dict[str, int | None]:
         if not text:
             return {"salary_min": None, "salary_max": None}
-        numbers = [int(n.replace(",", "")) for n in re.findall(r"[\d,]+", text)]
+        # Require at least one digit so lone commas from LLM text do not crash.
+        numbers = [
+            int(n.replace(",", ""))
+            for n in re.findall(r"\d[\d,]*", text)
+            if n.replace(",", "").isdigit()
+        ]
         numbers = [n for n in numbers if 10_000 <= n <= 1_000_000]
         if len(numbers) >= 2:
             return {"salary_min": min(numbers), "salary_max": max(numbers)}
