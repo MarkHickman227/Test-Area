@@ -2,23 +2,11 @@
 
 This guide wires ApplyPilot so discovery runs **reliably twice per day** with no overlapping jobs and clear skip/error reporting.
 
-## Recommended production setup (AWS)
+## Recommended production setup (VPS)
 
-**Production target is AWS** — see `docs/aws-deployment.md`.
+**Production target is the Hostinger VPS** — see `docs/vps-deployment.md`.
 
-Run ApplyPilot as an always-on **ECS Fargate** service so the in-app scheduler can fire at fixed London times. Put API keys in **Secrets Manager**. Monitor with **CloudWatch**. Optional backup clock: EventBridge → `POST /api/pipeline/run`.
-
-```env
-SCHEDULER_ENABLED=true
-DISCOVERY_SCHEDULE_MODE=twice_daily
-DISCOVERY_TIMES=08:00,20:00
-DISCOVERY_TIMEZONE=Europe/London
-PIPELINE_TRIGGER_TOKEN=replace-with-long-random-token
-```
-
-## Local / lab Docker Compose
-
-For laptop or short-lived lab hosts only (not AWS production):
+Keep ApplyPilot running with Docker Compose on `168.231.114.133`. The in-app scheduler fires at fixed London times. Monitor via Portainer (`:9000`) and health endpoints.
 
 ```env
 SCHEDULER_ENABLED=true
@@ -28,13 +16,16 @@ DISCOVERY_TIMEZONE=Europe/London
 PIPELINE_TRIGGER_TOKEN=replace-with-long-random-token
 ```
 
-Then:
+Then on the VPS:
 
 ```bash
+cd /root/applypilot
 docker compose up --build -d
-curl -s http://127.0.0.1:8000/api/health | jq .
-curl -s http://127.0.0.1:8000/api/scheduler/status | jq .
+curl -s http://127.0.0.1:8765/api/health | jq .
+curl -s http://127.0.0.1:8765/api/scheduler/status | jq .
 ```
+
+Public UI: `http://168.231.114.133:8765`
 
 Reliability guarantees:
 
@@ -54,6 +45,15 @@ Optional host cron fallback (only if the in-app scheduler is disabled):
 
 Do **not** enable both host cron and `SCHEDULER_ENABLED=true` unless you accept possible duplicate runs (the lock still prevents true overlap).
 
+## Local / lab Docker Compose
+
+For laptop or Cursor cloud agent previews:
+
+```bash
+docker compose up --build -d
+# or uvicorn on :8000 — see AGENTS.md
+```
+
 ## Cursor Cloud environment
 
 Repo file: `.cursor/environment.json`
@@ -69,67 +69,40 @@ Add these secrets in the [Cloud Agents environment](https://cursor.com/dashboard
 - `ANTHROPIC_API_KEY`
 - `PERPLEXITY_API_KEY`
 - `PIPELINE_TRIGGER_TOKEN` (optional but recommended)
+- `VPS_SSH_PASSWORD` (or SSH key) for deploy
 
-Cloud agent VMs are not long-lived 24/7 hosts. For always-on twice-daily runs, prefer **AWS ECS Fargate** (`docs/aws-deployment.md`). Use Cursor Automations only as a secondary trigger that calls the AWS health/pipeline endpoints.
+Cloud agent VMs are not long-lived 24/7 hosts. For always-on twice-daily runs, prefer the **VPS** scheduler (`docs/vps-deployment.md`).
 
-## Cursor Automations (cloud trigger)
+## Cursor Automations (optional cloud trigger)
 
 1. Open [cursor.com/automations](https://cursor.com/automations).
 2. Create automation **ApplyPilot twice daily**.
-3. Trigger: Scheduled cron `0 8,20 * * *` with timezone **Europe/London** (or the UI equivalent).
+3. Trigger: Scheduled cron `0 8,20 * * *` with timezone **Europe/London**.
 4. Repository: `MarkHickman227/Test-Area` on branch `main` (after merge).
-5. Prompt: use the text in `.cursor/automations/applypilot-twice-daily.prompt.md`.
-6. Save and enable.
+5. Prompt: `.cursor/automations/applypilot-twice-daily.prompt.md`.
+6. Prefer calling the **VPS** `POST http://168.231.114.133:8765/api/pipeline/run` when the VPS is healthy.
 
 ## GitHub Actions backup trigger
 
-Workflow: `.github/workflows/applypilot-twice-daily.yml`
-
-Uses the Cursor Cloud Agents API so discovery still fires if you prefer CI as the clock.
-
-Required GitHub secrets:
-
-| Secret | Purpose |
-|--------|---------|
-| `CURSOR_API_KEY` | Cursor API key |
-| `APPLYPILOT_AGENT_ID` | Durable agent id (`bc-...`) created once |
-
-One-time agent bootstrap (from your laptop):
-
-```bash
-curl -u "$CURSOR_API_KEY:" \
-  -H 'Content-Type: application/json' \
-  -d @- https://api.cursor.com/v1/agents <<'EOF'
-{
-  "prompt": { "text": "Bootstrap ApplyPilot twice-daily agent. Read AGENTS.md and docs/twice-daily-automation.md. Do not open a PR." },
-  "repos": [{ "url": "https://github.com/MarkHickman227/Test-Area", "startingRef": "main" }],
-  "autoCreatePR": false
-}
-EOF
-```
-
-Store the returned agent id as `APPLYPILOT_AGENT_ID`.
+Workflow: `.github/workflows/applypilot-twice-daily.yml` (optional). Prefer VPS in-app scheduler as the primary clock.
 
 ## Manual verification
 
 ```bash
-# Health + schedule
-curl -s http://127.0.0.1:8000/api/health | jq '{ready: .ready_for_discovery, times: .discovery_times, tz: .discovery_timezone, scheduler: .scheduler}'
-
-# One controlled run
-curl -s -X POST http://127.0.0.1:8000/api/pipeline/run \
+curl -s http://127.0.0.1:8765/api/health | jq '{ready: .ready_for_discovery, times: .discovery_times, tz: .discovery_timezone, scheduler: .scheduler}'
+curl -s -X POST http://127.0.0.1:8765/api/pipeline/run \
   -H "Authorization: Bearer $PIPELINE_TRIGGER_TOKEN" | jq .
 ```
 
-Expected successful body includes `"status": "ok"` and a `stats` object. Intentional skips return `"status": "skipped"` with a reason (never treat that as a crash).
+Expected successful body includes `"status": "ok"` and a `stats` object. Intentional skips return `"status": "skipped"` with a reason.
 
 ## Pick one clock
 
 | Mode | Use when |
 |------|----------|
-| AWS ECS in-app scheduler | **Production default** |
-| EventBridge → `/api/pipeline/run` | AWS backup clock |
-| Cursor Automation | Dev/cloud-agent trigger only |
-| GitHub Actions → Cursor API | External cron backup |
+| VPS in-app scheduler | **Production default** |
+| VPS host cron → `/api/pipeline/run` | Backup on the same box |
+| Cursor Automation | Dev/cloud trigger only |
+| GitHub Actions | External cron backup |
 
 Use **one** primary clock. Extra clocks are optional backups only.

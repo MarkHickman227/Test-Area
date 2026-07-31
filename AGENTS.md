@@ -2,9 +2,14 @@
 
 ## Cursor Cloud specific instructions
 
-ApplyPilot is a FastAPI (Python 3.12) backend + vanilla JS frontend for AI-powered job application review. See `docs/user-guide.md` for product context, `docs/twice-daily-automation.md` for scheduled runs, and **`docs/aws-deployment.md` for production deployment on AWS** (ECS Fargate + Secrets Manager + CloudWatch).
+ApplyPilot is a FastAPI (Python 3.12) backend + vanilla JS frontend for AI-powered job application review.
 
-**Production target is AWS cloud.** Do not treat the Hostinger VPS as the production destination.
+- Product: `docs/user-guide.md`
+- Schedule: `docs/twice-daily-automation.md`
+- **Production deploy (VPS):** `docs/vps-deployment.md`
+- Optional AWS sketch only: `docs/aws-deployment.md`
+
+**Production target is the Hostinger VPS** (`168.231.114.133:8765`). AWS is not the default.
 
 ### Running services
 
@@ -26,7 +31,7 @@ When this agent is started by the twice-daily automation:
 6. Do **not** open a PR unless code changes were required to unblock the run.
 7. Never submit job applications. ApplyPilot is review-only.
 
-### Required secrets (Cloud Agents dashboard)
+### Required secrets (Cloud Agents dashboard + VPS `config/.env`)
 
 | Secret | Purpose |
 |--------|---------|
@@ -35,25 +40,22 @@ When this agent is started by the twice-daily automation:
 | `ANTHROPIC_API_KEY` | Scoring + artifacts |
 | `PERPLEXITY_API_KEY` | Job discovery |
 | `PIPELINE_TRIGGER_TOKEN` | Optional auth for `/api/pipeline/run` |
+| `VPS_SSH_PASSWORD` or SSH key | Deploy/monitor on `root@168.231.114.133` |
 
-Copy values into `config/.env` before starting the server if secrets are injected as environment variables.
+### Closed-loop skills
+
+1. `spec-to-implementation` / `tasks-plan` / `tasks-build` — design board
+2. Core coding + `pytest` — build/test
+3. `tasks-explain-diff` / Bugbot / security-review — review
+4. VPS Docker Compose + Portainer — deploy/ops (`docs/vps-deployment.md`)
+5. `/api/health` + `/api/scheduler/status` — monitor
+6. Never submit applications; human review only
 
 ### Tests
 
 ```
 source .venv/bin/activate && cd backend && python -m pytest tests/ -v
 ```
-
-### Skills for AWS full loop
-
-Use these when taking ApplyPilot from design through AWS production:
-
-1. `spec-to-implementation` / `tasks-plan` / `tasks-build` — design and delivery board
-2. `aws-containers` — ECR + ECS Fargate + ALB
-3. `aws-secrets-manager` — inject secrets without printing values
-4. `aws-observability` — CloudWatch logs, alarms, dashboards
-5. Manual GUI review (computer use) + pytest before promote
-6. Never submit applications; human review only
 
 ### Scheduler defaults
 

@@ -23,13 +23,13 @@ ApplyPilot does not submit applications automatically. You stay in control of ev
 
 | Requirement | What it is | Where to get it |
 | --- | --- | --- |
-| AWS account | Production host for ApplyPilot (ECS Fargate). | `docs/aws-deployment.md` |
+| VPS server | Linux host for ApplyPilot (Hostinger). | `docs/vps-deployment.md` |
 | Anthropic API key | Powers AI scoring and writing. | `console.anthropic.com` |
 | Supabase account | Hosts your database. | `supabase.com` |
 | Unipile account | Optional LinkedIn message sending. | `unipile.com` |
 | Docker installed | Runs application containers. | `docs.docker.com/get-docker` |
 
-You can run ApplyPilot on **AWS** (ECS Fargate) plus API usage if you process a moderate number of jobs per day. See `docs/aws-deployment.md`.
+You can run ApplyPilot on a **VPS** (~£5–10/mo) plus API usage if you process a moderate number of jobs per day. See `docs/vps-deployment.md`.
 
 ### Installation
 

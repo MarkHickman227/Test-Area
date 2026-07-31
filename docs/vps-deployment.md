@@ -1,0 +1,74 @@
+# ApplyPilot VPS deployment (production)
+
+**Primary production target: Hostinger VPS** (`168.231.114.133`, hostname `srv832290`).
+
+AWS (`docs/aws-deployment.md`) is optional/future only.
+
+## Architecture on the VPS
+
+| Piece | How |
+|-------|-----|
+| App | Docker Compose (`backend` + `frontend`) from `applypilot-deployment.tar.gz` or this repo |
+| UI | Frontend on **8765** (nginx → backend `:8000`) |
+| Data | Supabase (`SUPABASE_*` or `DATABASE_URL` pooler) |
+| Schedule | In-app `twice_daily` at 08:00 / 20:00 `Europe/London` |
+| Ops UI | Portainer at `http://168.231.114.133:9000/` |
+| Backup clock | Host cron → `POST /api/pipeline/run` (only if in-app scheduler disabled) |
+
+## Closed-loop process
+
+1. **Design → build** — tasks from user guide / Notion (`spec-to-implementation` → `tasks-plan` → `tasks-build`)
+2. **Test** — `pytest backend/tests` until green
+3. **Review** — PR review / Bugbot / security-review; manual GUI check
+4. **Deploy** — SSH + `docker compose up --build -d` on the VPS
+5. **Verify** — `/api/health`, `/api/scheduler/status`, preferences saved, `ready_for_discovery: true`
+6. **Monitor** — Portainer + health/scheduler endpoints; optional Telegram alerts
+
+## Deploy commands (on VPS as root)
+
+```bash
+cd /root/applypilot   # or extract applypilot-deployment.tar.gz first
+cp -n config/.env.example config/.env
+nano config/.env      # fill real secrets — never commit this file
+docker compose up --build -d
+ufw allow 8765/tcp
+ufw allow 8000/tcp
+docker compose ps
+curl -s http://127.0.0.1:8765/api/health
+curl -s http://127.0.0.1:8765/api/scheduler/status
+```
+
+Public URL: `http://168.231.114.133:8765`
+
+## Required secrets in `config/.env`
+
+| Variable | Purpose |
+|----------|---------|
+| `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` and/or `DATABASE_URL` | Persistence |
+| `ANTHROPIC_API_KEY` | Scoring + artifacts |
+| `PERPLEXITY_API_KEY` | Discovery |
+| `PIPELINE_TRIGGER_TOKEN` | Optional auth for `/api/pipeline/run` |
+| `SCHEDULER_ENABLED=true` | Twice-daily loop |
+| `DISCOVERY_SCHEDULE_MODE=twice_daily` | Fixed times |
+| `DISCOVERY_TIMES=08:00,20:00` | London wall clock |
+| `DISCOVERY_TIMEZONE=Europe/London` | Timezone |
+
+## Access blockers (must be provided to the agent)
+
+- Cursor Cloud secrets for the keys above (for cloud-agent testing)
+- **VPS SSH** password or private key for `root@168.231.114.133`
+- Portainer login (optional, for ops)
+
+Without SSH, the agent can prepare the package and verify locally, but cannot finish VPS deploy/monitor.
+
+## Cost (approx)
+
+- Hostinger KVM: **~£5–13/mo** (or ~£0 marginal if this VPS is already paid for)
+- Anthropic + Perplexity: **~£0.01–0.05 per job**
+- Target from product guide: under **£15/mo** at moderate volume
+
+## Related
+
+- Schedule details: `docs/twice-daily-automation.md`
+- Product: `docs/user-guide.md`
+- Optional AWS path: `docs/aws-deployment.md`

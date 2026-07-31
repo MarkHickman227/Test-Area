@@ -127,6 +127,125 @@ class PostgresRepository:
         )
         return preferences
 
+    async def insert_job(self, job: dict[str, Any]) -> dict[str, Any] | None:
+        columns = [
+            "source",
+            "source_url",
+            "title",
+            "company",
+            "location",
+            "description",
+            "salary_min",
+            "salary_max",
+            "job_type",
+            "agency",
+            "parsed_requirements",
+            "score",
+            "score_explanation",
+            "status",
+        ]
+        values: list[Any] = []
+        placeholders: list[str] = []
+        insert_cols: list[str] = []
+        for column in columns:
+            if column not in job:
+                continue
+            insert_cols.append(column)
+            placeholders.append("%s")
+            value = job[column]
+            if column == "parsed_requirements":
+                values.append(Jsonb(value if value is not None else {}))
+            else:
+                values.append(value)
+
+        if "id" in job and job["id"]:
+            insert_cols.insert(0, "id")
+            placeholders.insert(0, "%s")
+            values.insert(0, job["id"])
+
+        query = f"""
+            insert into jobs ({', '.join(insert_cols)})
+            values ({', '.join(placeholders)})
+            on conflict (source_url) do nothing
+            returning *
+        """
+        rows = await self._fetch_all(query, values)
+        return dict(rows[0]) if rows else None
+
+    async def update_job_fields(self, job_id: str, fields: dict[str, Any]) -> None:
+        if not fields:
+            return
+        assignments: list[str] = []
+        params: list[Any] = []
+        for key, value in fields.items():
+            assignments.append(f"{key} = %s")
+            if key in {"parsed_requirements"} or isinstance(value, (dict, list)):
+                params.append(Jsonb(value))
+            else:
+                params.append(value)
+        params.append(job_id)
+        await self._execute(
+            f"update jobs set {', '.join(assignments)}, updated_at = now() where id = %s",
+            params,
+        )
+
+    async def insert_artifact(self, job_id: str, artifact_type: str, content: Any) -> None:
+        await self._execute(
+            """
+            insert into application_artifacts (job_id, artifact_type, content)
+            values (%s, %s, %s)
+            """,
+            [job_id, artifact_type, Jsonb(content)],
+        )
+
+    async def insert_recruiter_outreach(self, job_id: str, email_body: str) -> None:
+        await self._execute(
+            """
+            insert into recruiter_outreach (job_id, email_body)
+            values (%s, %s)
+            on conflict (job_id) do update set email_body = excluded.email_body, updated_at = now()
+            """,
+            [job_id, email_body],
+        )
+
+    async def get_best_cv(self) -> dict[str, Any] | None:
+        rows = await self._fetch_all(
+            "select id, label, parsed_profile from cvs order by created_at desc limit 1",
+            [],
+        )
+        return dict(rows[0]) if rows else None
+
+    async def list_cvs(self):
+        from app.models import CvRecord
+
+        rows = await self._fetch_all("select * from cvs order by created_at desc", [])
+        return [CvRecord.model_validate(row) for row in rows]
+
+    async def create_cv(self, data: dict[str, Any]):
+        from app.models import CvRecord
+
+        rows = await self._fetch_all(
+            """
+            insert into cvs (label, file_name, raw_text, parsed_profile)
+            values (%s, %s, %s, %s)
+            returning *
+            """,
+            [
+                data["label"],
+                data["file_name"],
+                data["raw_text"],
+                Jsonb(data.get("parsed_profile") or {}),
+            ],
+        )
+        return CvRecord.model_validate(rows[0])
+
+    async def delete_cv(self, cv_id: UUID) -> None:
+        await self._execute("delete from cvs where id = %s", [cv_id])
+
+    async def get_status_counts(self) -> dict[str, int]:
+        rows = await self._fetch_all("select status, count(*) as count from jobs group by status", [])
+        return {row["status"]: int(row["count"]) for row in rows}
+
     async def _fetch_all(self, query: str, params: list[Any]) -> list[dict[str, Any]]:
         async with await psycopg.AsyncConnection.connect(
             self.settings.database_url,
