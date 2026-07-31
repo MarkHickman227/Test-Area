@@ -2,9 +2,23 @@
 
 This guide wires ApplyPilot so discovery runs **reliably twice per day** with no overlapping jobs and clear skip/error reporting.
 
-## Recommended production setup (VPS)
+## Recommended production setup (AWS)
 
-Keep ApplyPilot running with Docker Compose on your VPS. The in-app scheduler fires at fixed local times.
+**Production target is AWS** — see `docs/aws-deployment.md`.
+
+Run ApplyPilot as an always-on **ECS Fargate** service so the in-app scheduler can fire at fixed London times. Put API keys in **Secrets Manager**. Monitor with **CloudWatch**. Optional backup clock: EventBridge → `POST /api/pipeline/run`.
+
+```env
+SCHEDULER_ENABLED=true
+DISCOVERY_SCHEDULE_MODE=twice_daily
+DISCOVERY_TIMES=08:00,20:00
+DISCOVERY_TIMEZONE=Europe/London
+PIPELINE_TRIGGER_TOKEN=replace-with-long-random-token
+```
+
+## Local / lab Docker Compose
+
+For laptop or short-lived lab hosts only (not AWS production):
 
 ```env
 SCHEDULER_ENABLED=true
@@ -56,7 +70,7 @@ Add these secrets in the [Cloud Agents environment](https://cursor.com/dashboard
 - `PERPLEXITY_API_KEY`
 - `PIPELINE_TRIGGER_TOKEN` (optional but recommended)
 
-Cloud agent VMs are not long-lived 24/7 hosts. For always-on twice-daily runs, prefer the VPS scheduler above. Use Cursor Automations when you want Cursor to wake a cloud agent twice a day and trigger one cycle.
+Cloud agent VMs are not long-lived 24/7 hosts. For always-on twice-daily runs, prefer **AWS ECS Fargate** (`docs/aws-deployment.md`). Use Cursor Automations only as a secondary trigger that calls the AWS health/pipeline endpoints.
 
 ## Cursor Automations (cloud trigger)
 
@@ -113,8 +127,9 @@ Expected successful body includes `"status": "ok"` and a `stats` object. Intenti
 
 | Mode | Use when |
 |------|----------|
-| VPS in-app scheduler | Production default |
-| Cursor Automation | Cloud-only runs without a VPS |
+| AWS ECS in-app scheduler | **Production default** |
+| EventBridge → `/api/pipeline/run` | AWS backup clock |
+| Cursor Automation | Dev/cloud-agent trigger only |
 | GitHub Actions → Cursor API | External cron backup |
 
 Use **one** primary clock. Extra clocks are optional backups only.

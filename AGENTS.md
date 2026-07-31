@@ -2,7 +2,9 @@
 
 ## Cursor Cloud specific instructions
 
-ApplyPilot is a FastAPI (Python 3.12) backend + vanilla JS frontend for AI-powered job application review. See `docs/user-guide.md` for product context and `docs/twice-daily-automation.md` for scheduled runs.
+ApplyPilot is a FastAPI (Python 3.12) backend + vanilla JS frontend for AI-powered job application review. See `docs/user-guide.md` for product context, `docs/twice-daily-automation.md` for scheduled runs, and **`docs/aws-deployment.md` for production deployment on AWS** (ECS Fargate + Secrets Manager + CloudWatch).
+
+**Production target is AWS cloud.** Do not treat the Hostinger VPS as the production destination.
 
 ### Running services
 
@@ -41,6 +43,17 @@ Copy values into `config/.env` before starting the server if secrets are injecte
 ```
 source .venv/bin/activate && cd backend && python -m pytest tests/ -v
 ```
+
+### Skills for AWS full loop
+
+Use these when taking ApplyPilot from design through AWS production:
+
+1. `spec-to-implementation` / `tasks-plan` / `tasks-build` — design and delivery board
+2. `aws-containers` — ECR + ECS Fargate + ALB
+3. `aws-secrets-manager` — inject secrets without printing values
+4. `aws-observability` — CloudWatch logs, alarms, dashboards
+5. Manual GUI review (computer use) + pytest before promote
+6. Never submit applications; human review only
 
 ### Scheduler defaults
 

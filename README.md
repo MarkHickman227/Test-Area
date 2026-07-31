@@ -10,7 +10,8 @@ ApplyPilot never submits applications automatically. The dashboard is the final 
 - Static frontend dashboard for filtering jobs, reviewing generated artifacts, and updating pipeline status.
 - Twice-daily discovery scheduler with run locking and retries.
 - Supabase SQL schema and helper functions.
-- Docker Compose setup for the backend and frontend containers.
+- Docker Compose setup for local/lab runs.
+- **AWS production deploy** target: ECS Fargate + Secrets Manager + CloudWatch (`docs/aws-deployment.md`).
 - Cursor Cloud environment config (`.cursor/environment.json`) and automation runbook.
 - User guide in `docs/user-guide.md`.
 
