@@ -10,29 +10,27 @@ Updated: 2026-07-31
 |-------|--------|-------|
 | Design → build | Done on branch | Pipeline + twice-daily scheduler + GUI |
 | Unit/API tests | **Pass** | `35 passed` |
-| Code review | **Done** | Postgres pipeline methods fixed on branch |
+| Code review | **Done** | Postgres pipeline methods + salary parse fix |
 | Deploy to VPS | **Live** | Backend rebuilt from branch; **old GUI** kept on `:8765` |
 | Database | **Local Postgres** | Compose `db` service (Supabase tenant was dead) |
-| Live discovery | **Ready** | Preferences seeded; scheduler next run 20:00 London |
-| Twice-daily clock | **Armed** | `08:00` / `20:00` `Europe/London` |
+| Discovery | **Working** | Manual run found **8 jobs** |
+| Enrich / score | **Blocked** | Anthropic: credit balance too low |
+| Twice-daily clock | **Armed** | Next run `20:00` Europe/London |
 | Monitor | Portainer + health | Backend / frontend / db up |
 
 ## Live now
 
-- UI: `http://168.231.114.133:8765/` — original ApplyPilot dashboard (filters + jobs + detail)
-- Health: `data_store=postgres`, Anthropic + Perplexity configured, `ready_for_discovery=true`
-- Scheduler: `twice_daily`, next run at `20:00` Europe/London
-- Jobs / preferences APIs: **200**
+- UI: `http://168.231.114.133:8765/` — original ApplyPilot dashboard
+- Health: `data_store=postgres`, Perplexity ok, Anthropic key present but **out of credits**
+- Scheduler: `twice_daily` 08:00 / 20:00 London — last run ok (discover only)
+- Jobs API: **200** with discovered listings (score null until Anthropic is funded)
 
-## What changed on the VPS
+## Action for Mark
 
-1. SSH with Hostinger root credentials restored the stopped stack
-2. Dead Supabase pooler (`postgres.gpljgcqxuryxmcxwklzm`) replaced with **local Postgres 16** in Compose
-3. Backend image rebuilt from this branch (twice-daily scheduler + Postgres repository)
-4. Default search preferences saved via API (old UI has no preferences form)
-
-Optional later: restore a healthy Supabase project and switch `DATABASE_URL` back if you want hosted Postgres.
+1. Add Anthropic credits (Plans & Billing) so enrich/score/generate resume
+2. Optionally upload a CV (old UI has no CV form — use `POST /api/cvs` or restore CV UI)
+3. **Rotate the Hostinger root password** shared in chat
 
 ## Security
 
-Root password was shared in chat — **rotate it in Hostinger hPanel** after this session. Do not commit passwords to the repo.
+Do not commit passwords to the repo.
