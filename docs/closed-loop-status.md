@@ -2,33 +2,42 @@
 
 **Production target:** Hostinger VPS (`168.231.114.133:8765`) — see `docs/vps-deployment.md`.
 
-Reviewed: 2026-07-31
+Updated: 2026-07-31
 
-## Process map (run where possible)
+## Process map
 
 | Phase | Status | Notes |
 |-------|--------|-------|
 | Design → build | Done on branch | Pipeline + twice-daily scheduler + GUI |
 | Unit/API tests | **Pass** | `35 passed` |
-| Code review | **Done** | Bugbot: fixed missing Postgres pipeline methods |
-| Manual GUI (local) | Partial | Local `:8000` serves UI with seed data |
-| Deploy to VPS | **Blocked** | No SSH credentials for `root@168.231.114.133` |
-| Live discovery | **Blocked** | Secrets missing; `ready_for_discovery: false` |
-| Twice-daily clock | Configured in code | Not firing live until VPS + secrets + preferences |
-| Monitor | Blocked on VPS | Portainer up (`:9000`); ApplyPilot `:8765` down |
+| Code review | **Done** | Postgres pipeline methods fixed on branch |
+| Deploy to VPS | **Partial** | Stack restarted; **old GUI live** on `:8765` |
+| Live discovery | **Blocked** | Supabase DB tenant not found |
+| Twice-daily clock | Env updated | Needs working DB + preferences |
+| Monitor | Portainer + health | Backend/frontend up |
 
-## Blockers (access, not skills)
+## Live now
 
-1. **VPS SSH** — password or key for `root@168.231.114.133`
-2. **Secrets** — `SUPABASE_*` / `DATABASE_URL`, `ANTHROPIC_API_KEY`, `PERPLEXITY_API_KEY`
-3. **Preferences saved** on the live instance after deploy
-4. **Merge PR** so `main` has the scheduler + deploy docs
+- UI: `http://168.231.114.133:8765/` — original ApplyPilot dashboard (filters + jobs + detail)
+- Health: `200` — Anthropic + Perplexity configured; DB connect fails at runtime
+- Backend was stopped ~5 weeks; frontend crash-loop fixed by bringing backend back on the Compose network
 
-## Next actions after access is granted
+## Remaining blocker
 
-1. SSH → `/root/applypilot` → update `config/.env` → `docker compose up --build -d`
-2. Open `http://168.231.114.133:8765` → save preferences → upload CV
-3. `curl /api/health` until `ready_for_discovery: true`
-4. Trigger once: `POST /api/pipeline/run`
-5. Confirm scheduler status shows next run 08:00 / 20:00 Europe/London
-6. Watch Portainer + health for ongoing monitor
+Supabase pooler error:
+
+`FATAL: (ENOTFOUND) tenant/user postgres.gpljgcqxuryxmcxwklzm not found`
+
+Also `SUPABASE_URL` on the VPS is still the placeholder `your-project.supabase.co`.
+
+Fix in Supabase dashboard (unpause/recreate project or correct pooler URI), update `/root/applypilot/config/.env`, then:
+
+```bash
+cd /root/applypilot && docker compose up -d --force-recreate backend
+```
+
+Confirm `/api/jobs` returns `200`, save preferences, then discovery can run.
+
+## Security
+
+Root password was shared in chat — **rotate it in Hostinger hPanel** after this session.
