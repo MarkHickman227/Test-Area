@@ -5,3 +5,5 @@ __pycache__/
 .env
 config/.env
 config/local_data.json
+backups/
+*.sql.gz

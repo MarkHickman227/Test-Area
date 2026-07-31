@@ -13,8 +13,9 @@ Updated: 2026-07-31
 | Code review | **Done** | Postgres pipeline methods + salary parse fix |
 | Deploy to VPS | **Live** | Backend rebuilt from branch; **old GUI** kept on `:8765` |
 | Database | **Local Postgres** | Compose `db` service (Supabase tenant was dead) |
-| Discovery | **Working** | Manual run found **8 jobs** |
+| Discovery | **Working** | Manual run found jobs (6 stored; dupes skipped) |
 | Enrich / score | **Blocked** | Anthropic: credit balance too low |
+| Data protection | **On** | Named Postgres volume + daily `pg_dump` cron + restore script |
 | Twice-daily clock | **Armed** | Next run `20:00` Europe/London |
 | Monitor | Portainer + health | Backend / frontend / db up |
 
@@ -24,6 +25,7 @@ Updated: 2026-07-31
 - Health: `data_store=postgres`, Perplexity ok, Anthropic key present but **out of credits**
 - Scheduler: `twice_daily` 08:00 / 20:00 London — last run ok (discover only)
 - Jobs API: **200** with discovered listings (score null until Anthropic is funded)
+- Backups: `/root/applypilot/backups/` (see `docs/data-safety.md`) — **never** `docker compose down -v`
 
 ## Action for Mark
 

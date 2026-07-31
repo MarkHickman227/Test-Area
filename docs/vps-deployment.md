@@ -10,10 +10,11 @@ AWS (`docs/aws-deployment.md`) is optional/future only.
 |-------|-----|
 | App | Docker Compose (`db` + `backend` + `frontend`) under `/root/applypilot` |
 | UI | Frontend on **8765** (nginx → backend `:8000`) — keep the original dashboard |
-| Data | **Local Postgres** in Compose (default). Optional: Supabase via `DATABASE_URL` / `SUPABASE_*` |
+| Data | **Local Postgres** named volume `applypilot_pgdata` (never `docker compose down -v`) |
 | Schedule | In-app `twice_daily` at 08:00 / 20:00 `Europe/London` |
 | Ops UI | Portainer at `http://168.231.114.133:9000/` |
-| Backup clock | Host cron → `POST /api/pipeline/run` (only if in-app scheduler disabled) |
+| DB backups | Daily cron → `scripts/backup-db.sh` → `/root/applypilot/backups/` (see `docs/data-safety.md`) |
+| Pipeline backup clock | Host cron → `POST /api/pipeline/run` (only if in-app scheduler disabled) |
 
 ## Closed-loop process
 
@@ -26,17 +27,29 @@ AWS (`docs/aws-deployment.md`) is optional/future only.
 
 ## Deploy commands (on VPS as root)
 
+**Safe redeploy** (keeps jobs/preferences — does **not** delete the Postgres volume):
+
 ```bash
-cd /root/applypilot   # or extract applypilot-deployment.tar.gz first
+cd /root/applypilot
+./scripts/backup-db.sh          # snapshot before changes
+docker compose up -d --build    # never add -v
+docker compose ps
+curl -s http://127.0.0.1:8000/api/health
+curl -s http://127.0.0.1:8000/api/scheduler/status
+```
+
+First-time / env setup only:
+
+```bash
+cd /root/applypilot
 cp -n config/.env.example config/.env
 nano config/.env      # fill real secrets — never commit this file
 docker compose up --build -d
 ufw allow 8765/tcp
 ufw allow 8000/tcp
-docker compose ps
-curl -s http://127.0.0.1:8765/api/health
-curl -s http://127.0.0.1:8765/api/scheduler/status
 ```
+
+**Never run** `docker compose down -v` or `docker volume rm applypilot_applypilot_pgdata` unless you intend to wipe data (restore from `docs/data-safety.md` afterward).
 
 Public URL: `http://168.231.114.133:8765`
 
