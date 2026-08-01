@@ -1,0 +1,52 @@
+name: ApplyPilot twice daily
+
+on:
+  schedule:
+    # 08:00 and 20:00 Europe/London approximated in UTC.
+    # Winter (GMT): 08:00/20:00 UTC. Summer (BST): 07:00/19:00 UTC.
+    - cron: "0 7 * * *"
+    - cron: "0 8 * * *"
+    - cron: "0 19 * * *"
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard required secrets
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          APPLYPILOT_AGENT_ID: ${{ secrets.APPLYPILOT_AGENT_ID }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ] || [ -z "$APPLYPILOT_AGENT_ID" ]; then
+            echo "Missing CURSOR_API_KEY or APPLYPILOT_AGENT_ID."
+            echo "Configure GitHub secrets before enabling this workflow."
+            exit 1
+          fi
+
+      - name: Trigger Cursor cloud agent run
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          APPLYPILOT_AGENT_ID: ${{ secrets.APPLYPILOT_AGENT_ID }}
+        run: |
+          set -euo pipefail
+          # GitHub cron is UTC-only. Fire candidate hours around London 08:00/20:00,
+          # then no-op unless local London hour is exactly 08 or 20.
+          LONDON_HOUR=$(TZ=Europe/London date +%H)
+          if [ "$LONDON_HOUR" != "08" ] && [ "$LONDON_HOUR" != "20" ]; then
+            echo "Skipping trigger; Europe/London hour is ${LONDON_HOUR} (want 08 or 20)."
+            exit 0
+          fi
+          BODY='{"prompt":{"text":"Run the ApplyPilot twice-daily discovery cycle. Follow AGENTS.md and .cursor/automations/applypilot-twice-daily.prompt.md exactly. Do not open a PR unless a blocking bug must be fixed."}}'
+          HTTP_CODE=$(curl -sS -o /tmp/applypilot-trigger.json -w "%{http_code}" \
+            -u "${CURSOR_API_KEY}:" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "https://api.cursor.com/v1/agents/${APPLYPILOT_AGENT_ID}/runs")
+          cat /tmp/applypilot-trigger.json
+          echo
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "Trigger failed with HTTP $HTTP_CODE"
+            exit 1
+          fi

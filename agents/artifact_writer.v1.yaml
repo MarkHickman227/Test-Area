@@ -1,0 +1,16 @@
+name: artifact_writer
+version: 1
+description: Generates application artifacts (cover letters, CV summaries, screening answers, recruiter outreach)
+input: job details, artifact_type, optional reviewer notes
+output: text content for the requested artifact type
+provider: anthropic
+model: claude-sonnet-4-6
+max_tokens: 1800
+artifact_types:
+  cv_summary: Write a concise tailored CV headline and profile summary.
+  cover_letter: Write a specific, human-editable cover letter for this role.
+  screening_answers: Draft likely screening question answers using the available role context.
+  recruiter_outreach: Draft a short recruiter outreach email for an agency-listed role.
+guidelines: |
+  Keep claims grounded in the supplied CV summary and job details.
+  Do not invent experience or credentials.

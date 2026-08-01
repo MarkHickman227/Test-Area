@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+config/.env
+config/local_data.json
+backups/
+*.sql.gz
