@@ -20,45 +20,58 @@
       <div id="health" class="health">Checking API...</div>
     </header>
 
-    <main id="view-dashboard" class="layout">
-      <aside class="sidebar">
-        <section class="card">
-          <h2>Filters</h2>
-          <label>Status
-            <select id="status-filter">
-              <option value="">All</option>
-              <option>NEW</option>
-              <option>DRAFT</option>
-              <option>READY</option>
-              <option>SUBMITTED</option>
-              <option>INTERVIEW</option>
-              <option>OFFER</option>
-              <option>REJECTED</option>
-            </select>
-          </label>
-          <label>Type
-            <select id="type-filter">
-              <option value="">All</option>
-              <option value="PERM">Permanent</option>
-              <option value="CONTRACT">Contract</option>
-            </select>
-          </label>
-          <label>Minimum score
-            <input id="score-filter" type="number" min="0" max="100" placeholder="60" />
-          </label>
-          <button id="refresh">Refresh jobs</button>
-        </section>
-
-        <section class="card jobs-card">
-          <h2>Jobs</h2>
-          <div id="jobs" class="jobs-list">Loading jobs...</div>
-        </section>
-      </aside>
-
-      <section id="detail" class="detail card">
-        <h2>Select a job</h2>
-        <p>Choose a scored opportunity to review the job description, fit explanation, and application artifacts.</p>
+    <main id="view-dashboard">
+      <section class="metrics-strip" aria-label="Application counts">
+        <button type="button" class="metric-tile active" data-filter-status="" data-filter-type="">
+          <span class="metric-label">Total</span>
+          <span class="metric-value" id="count-total">0</span>
+        </button>
+        <button type="button" class="metric-tile" data-filter-status="SUBMITTED" data-filter-type="">
+          <span class="metric-label">Applied</span>
+          <span class="metric-value" id="count-applied">0</span>
+        </button>
+        <button type="button" class="metric-tile" data-filter-status="SUBMITTED" data-filter-type="PERM">
+          <span class="metric-label">PERM applied</span>
+          <span class="metric-value" id="count-perm">0</span>
+        </button>
+        <button type="button" class="metric-tile" data-filter-status="SUBMITTED" data-filter-type="CONTRACT">
+          <span class="metric-label">CONTRACT applied</span>
+          <span class="metric-value" id="count-contract">0</span>
+        </button>
+        <button type="button" class="metric-tile" data-filter-status="NEW" data-filter-type="">
+          <span class="metric-label">New</span>
+          <span class="metric-value" id="count-new">0</span>
+        </button>
+        <button type="button" class="metric-tile" data-filter-status="INTERVIEW" data-filter-type="">
+          <span class="metric-label">Interviews</span>
+          <span class="metric-value" id="count-interview">0</span>
+        </button>
+        <button type="button" class="metric-tile" data-filter-status="OFFER" data-filter-type="">
+          <span class="metric-label">Offers</span>
+          <span class="metric-value" id="count-offer">0</span>
+        </button>
+        <button type="button" class="metric-tile" data-filter-status="REJECTED" data-filter-type="">
+          <span class="metric-label">Rejected</span>
+          <span class="metric-value" id="count-rejected">0</span>
+        </button>
       </section>
+
+      <div class="layout">
+        <aside class="sidebar">
+          <section class="card jobs-card">
+            <div class="jobs-header">
+              <h2>Jobs <span id="jobs-filter-label" class="meta">All</span></h2>
+              <button id="refresh" type="button" class="secondary">Refresh</button>
+            </div>
+            <div id="jobs" class="jobs-list">Loading jobs...</div>
+          </section>
+        </aside>
+
+        <section id="detail" class="detail card">
+          <h2>Select a job</h2>
+          <p>Choose a scored opportunity to review the job description, fit explanation, and application artifacts.</p>
+        </section>
+      </div>
     </main>
 
     <main id="view-analytics" class="view-panel" style="display:none">
@@ -76,7 +89,7 @@
         <label>Label <input id="cv-label" type="text" placeholder="e.g. EA Focus" /></label>
         <label>File name <input id="cv-filename" type="text" placeholder="cv_architecture.pdf" /></label>
         <label>CV text <textarea id="cv-text" placeholder="Paste your CV text here..."></textarea></label>
-        <button id="cv-upload">Upload CV</button>
+        <button id="cv-upload" type="button">Upload CV</button>
       </section>
     </main>
 

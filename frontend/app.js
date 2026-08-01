@@ -2,15 +2,16 @@ const apiBase = "/api";
 let selectedJob = null;
 let activeTab = "cover_letter";
 let notice = "";
+let allJobs = [];
+let activeStatus = "";
+let activeType = "";
 
 const fields = {
   health: document.querySelector("#health"),
   jobs: document.querySelector("#jobs"),
   detail: document.querySelector("#detail"),
-  status: document.querySelector("#status-filter"),
-  type: document.querySelector("#type-filter"),
-  score: document.querySelector("#score-filter"),
   refresh: document.querySelector("#refresh"),
+  filterLabel: document.querySelector("#jobs-filter-label"),
 };
 
 async function request(path, options = {}) {
@@ -35,19 +36,54 @@ async function loadHealth() {
   }
 }
 
+function updateMetricTiles(jobs) {
+  const submitted = jobs.filter((job) => job.status === "SUBMITTED");
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(value);
+  };
+  set("count-total", jobs.length);
+  set("count-applied", submitted.length);
+  set("count-perm", submitted.filter((job) => job.job_type === "PERM").length);
+  set("count-contract", submitted.filter((job) => job.job_type === "CONTRACT").length);
+  set("count-new", jobs.filter((job) => job.status === "NEW").length);
+  set("count-interview", jobs.filter((job) => job.status === "INTERVIEW").length);
+  set("count-offer", jobs.filter((job) => job.status === "OFFER").length);
+  set("count-rejected", jobs.filter((job) => job.status === "REJECTED").length);
+}
+
+function filterLabel() {
+  const parts = [];
+  if (activeStatus) parts.push(activeStatus);
+  if (activeType) parts.push(activeType);
+  return parts.length ? parts.join(" · ") : "All";
+}
+
+function filteredJobs() {
+  return allJobs.filter((job) => {
+    if (activeStatus && job.status !== activeStatus) return false;
+    if (activeType && job.job_type !== activeType) return false;
+    return true;
+  });
+}
+
+function renderJobsList() {
+  const jobs = filteredJobs();
+  if (fields.filterLabel) fields.filterLabel.textContent = filterLabel();
+  fields.jobs.innerHTML = jobs.length
+    ? jobs.map(renderJobItem).join("")
+    : "<p>No jobs match this filter.</p>";
+  document.querySelectorAll(".job-item").forEach((node) => {
+    node.addEventListener("click", () => loadJob(node.dataset.id));
+  });
+}
+
 async function loadJobs() {
   fields.jobs.textContent = "Loading jobs...";
-  const params = new URLSearchParams();
-  if (fields.status.value) params.set("status", fields.status.value);
-  if (fields.type.value) params.set("job_type", fields.type.value);
-  if (fields.score.value) params.set("min_score", fields.score.value);
-
   try {
-    const jobs = await request(`/jobs?${params.toString()}`);
-    fields.jobs.innerHTML = jobs.length ? jobs.map(renderJobItem).join("") : "<p>No jobs match this filter.</p>";
-    document.querySelectorAll(".job-item").forEach((node) => {
-      node.addEventListener("click", () => loadJob(node.dataset.id));
-    });
+    allJobs = await request("/jobs");
+    updateMetricTiles(allJobs);
+    renderJobsList();
   } catch (error) {
     fields.jobs.innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`;
   }
@@ -103,8 +139,8 @@ function renderDetail() {
         </div>
         <textarea id="artifact-editor">${escapeHtml(tabValue)}</textarea>
         <div class="actions">
-          <button id="save-artifact">Save edits</button>
-          <button id="regenerate" class="secondary">Regenerate</button>
+          <button id="save-artifact" type="button">Save edits</button>
+          <button id="regenerate" type="button" class="secondary">Regenerate</button>
         </div>
         ${renderRecruiterPanel(selectedJob)}
       </section>
@@ -124,36 +160,32 @@ function renderDetail() {
 }
 
 function tabButton(tab, label) {
-  return `<button class="${activeTab === tab ? "" : "secondary"}" data-tab="${tab}">${label}</button>`;
+  return `<button type="button" class="${activeTab === tab ? "" : "secondary"}" data-tab="${tab}">${label}</button>`;
 }
 
 function statusButton(status, label) {
-  return `<button class="secondary" data-status="${status}">${label}</button>`;
+  return `<button type="button" class="secondary" data-status="${status}">${label}</button>`;
 }
 
 function tabContent(job, tab) {
   if (tab === "cv_summary") return job.tailored_summary || "";
-  if (tab === "screening_answers") return (job.screening_answers || [])
-    .map((item) => `${item.question}\n${item.answer}`)
-    .join("\n\n");
+  if (tab === "screening_answers") {
+    return (job.screening_answers || [])
+      .map((item) => `${item.question}\n${item.answer}`)
+      .join("\n\n");
+  }
   return job.cover_letter || "";
 }
 
 function renderRecruiterPanel(job) {
   if (!job.agency && !job.recruiter_outreach) return "";
   const outreach = job.recruiter_outreach || {};
-  const emailSent = outreach.email_sent ? "Sent" : "Not sent";
-  const linkedinSent = outreach.linkedin_sent ? "Sent" : "Not sent";
   return `
     <section class="panel">
       <h3>Recruiter outreach</h3>
-      <p><strong>Agency:</strong> ${escapeHtml(outreach.agency_name || "Unknown")}
-        ${outreach.contact_name ? ` | <strong>Contact:</strong> ${escapeHtml(outreach.contact_name)}` : ""}
-        ${outreach.contact_email ? ` | ${escapeHtml(outreach.contact_email)}` : ""}</p>
-      <p class="meta">Email: ${emailSent} | LinkedIn: ${linkedinSent}</p>
+      <p><strong>Agency:</strong> ${escapeHtml(outreach.agency_name || "Unknown")}</p>
       <pre>${escapeHtml(outreach.email_body || "No recruiter email drafted yet.")}</pre>
-      ${outreach.email_body ? `<button class="secondary" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent)">Copy email</button>` : ""}
-      ${outreach.linkedin_note ? `<pre>${escapeHtml(outreach.linkedin_note)}</pre><button class="secondary" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent)">Copy LinkedIn note</button>` : ""}
+      <pre>${escapeHtml(outreach.linkedin_note || "")}</pre>
     </section>`;
 }
 
@@ -206,8 +238,19 @@ function escapeHtml(value) {
   }[char]));
 }
 
-fields.refresh.addEventListener("click", loadJobs);
-[fields.status, fields.type, fields.score].forEach((field) => field.addEventListener("change", loadJobs));
+document.querySelectorAll(".metric-tile").forEach((tile) => {
+  tile.addEventListener("click", () => {
+    activeStatus = tile.dataset.filterStatus || "";
+    activeType = tile.dataset.filterType || "";
+    document.querySelectorAll(".metric-tile").forEach((node) => {
+      node.classList.toggle("active", node === tile);
+    });
+    renderJobsList();
+  });
+});
+
+if (fields.refresh) fields.refresh.addEventListener("click", loadJobs);
+
 document.addEventListener("keydown", (event) => {
   if (!selectedJob || !event.ctrlKey) return;
   if (event.key === "s") {
@@ -227,5 +270,6 @@ document.addEventListener("keydown", (event) => {
     renderDetail();
   }
 });
+
 loadHealth();
 loadJobs();
