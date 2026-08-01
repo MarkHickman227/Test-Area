@@ -183,6 +183,29 @@ class SupabaseRepository:
             counts[s] = counts.get(s, 0) + 1
         return counts
 
+    async def get_job_type_counts(self) -> dict[str, int]:
+        rows = await self._request("GET", "jobs", params={"select": "job_type"})
+        counts: dict[str, int] = {}
+        for row in rows:
+            key = row.get("job_type") or "UNKNOWN"
+            counts[key] = counts.get(key, 0) + 1
+        return counts
+
+    async def get_submitted_job_type_counts(self) -> dict[str, int]:
+        rows = await self._request(
+            "GET",
+            "jobs",
+            params={
+                "select": "job_type,status",
+                "status": "in.(SUBMITTED,INTERVIEW,OFFER)",
+            },
+        )
+        counts: dict[str, int] = {}
+        for row in rows:
+            key = row.get("job_type") or "UNKNOWN"
+            counts[key] = counts.get(key, 0) + 1
+        return counts
+
     async def _request(
         self,
         method: str,

@@ -246,6 +246,29 @@ class PostgresRepository:
         rows = await self._fetch_all("select status, count(*) as count from jobs group by status", [])
         return {row["status"]: int(row["count"]) for row in rows}
 
+    async def get_job_type_counts(self) -> dict[str, int]:
+        rows = await self._fetch_all(
+            """
+            select coalesce(job_type, 'UNKNOWN') as job_type, count(*) as count
+            from jobs
+            group by 1
+            """,
+            [],
+        )
+        return {row["job_type"]: int(row["count"]) for row in rows}
+
+    async def get_submitted_job_type_counts(self) -> dict[str, int]:
+        rows = await self._fetch_all(
+            """
+            select coalesce(job_type, 'UNKNOWN') as job_type, count(*) as count
+            from jobs
+            where status in ('SUBMITTED', 'INTERVIEW', 'OFFER')
+            group by 1
+            """,
+            [],
+        )
+        return {row["job_type"]: int(row["count"]) for row in rows}
+
     async def _fetch_all(self, query: str, params: list[Any]) -> list[dict[str, Any]]:
         async with await psycopg.AsyncConnection.connect(
             self.settings.database_url,

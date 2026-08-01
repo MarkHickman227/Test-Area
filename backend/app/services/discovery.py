@@ -14,10 +14,13 @@ logger = logging.getLogger(__name__)
 
 _JOB_TYPE_PATTERNS = {
     "CONTRACT": re.compile(
-        r"\b(?:contract|freelance|ftc|fixed[\s-]?term|interim|c2c)\b", re.IGNORECASE
+        r"\b(?:contract|freelance|ftc|fixed[\s-]?term|interim|c2c|"
+        r"outside\s+ir35|temporary|temp(?:\s*|-)?to(?:\s*|-)?perm|"
+        r"project\s+basis|\d+\s*month(?:s)?\s+(?:ftc|contract|fixed))\b",
+        re.IGNORECASE,
     ),
     "PERM": re.compile(
-        r"\b(?:permanent|perm|full[\s-]?time|salaried)\b", re.IGNORECASE
+        r"\b(?:permanent|perm(?!\w)|full[\s-]?time|salaried)\b", re.IGNORECASE
     ),
 }
 
@@ -110,7 +113,9 @@ class DiscoveryService:
                 "location": item.get("location"),
                 "description": description,
                 "job_type": self._infer_job_type(
-                    item.get("job_type", ""), description
+                    item.get("job_type"),
+                    description,
+                    title=item["title"],
                 ),
                 "agency": detect_agency(company=company, description=description),
                 "status": "NEW",
@@ -121,15 +126,39 @@ class DiscoveryService:
         return jobs
 
     @staticmethod
-    def _infer_job_type(explicit: str | None, description: str) -> str | None:
+    def _infer_job_type(
+        explicit: str | None,
+        description: str | None = "",
+        title: str | None = "",
+    ) -> str | None:
+        """Infer PERM vs CONTRACT from title/description; title signals beat a weak LLM PERM label."""
+        title_text = title or ""
+        # Avoid false positives like "Contract type: Permanent".
+        cleaned_description = re.sub(
+            r"contract\s*type\s*:\s*permanent",
+            "permanent",
+            description or "",
+            flags=re.IGNORECASE,
+        )
+        haystack = f"{title_text}\n{cleaned_description}"
+
+        # Title contract cues beat a generic PERM label from the model.
+        if _JOB_TYPE_PATTERNS["CONTRACT"].search(title_text):
+            return "CONTRACT"
+        if _JOB_TYPE_PATTERNS["CONTRACT"].search(cleaned_description):
+            # Description says permanent elsewhere → prefer PERM.
+            if _JOB_TYPE_PATTERNS["PERM"].search(cleaned_description):
+                return "PERM"
+            return "CONTRACT"
+
         normalized = (explicit or "").strip().upper()
+        if normalized in ("CONTRACT", "FREELANCE", "FTC", "INTERIM", "TEMPORARY"):
+            return "CONTRACT"
         if normalized in ("PERM", "PERMANENT"):
             return "PERM"
-        if normalized in ("CONTRACT", "FREELANCE", "FTC", "INTERIM"):
-            return "CONTRACT"
-        for jtype, pattern in _JOB_TYPE_PATTERNS.items():
-            if pattern.search(description):
-                return jtype
+
+        if _JOB_TYPE_PATTERNS["PERM"].search(haystack):
+            return "PERM"
         return None
 
     @staticmethod

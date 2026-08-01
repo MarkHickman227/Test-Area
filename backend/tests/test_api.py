@@ -77,6 +77,12 @@ class FakeRepository:
     async def get_status_counts(self):
         return {"DRAFT": 1}
 
+    async def get_job_type_counts(self):
+        return {"PERM": 1}
+
+    async def get_submitted_job_type_counts(self):
+        return {}
+
 
 class FakeWriter:
     async def regenerate(self, job, artifact, notes=None):
@@ -155,6 +161,8 @@ def test_analytics_returns_status_counts():
     data = response.json()
     assert data["total_jobs"] == 1
     assert data["status_counts"]["DRAFT"] == 1
+    assert data["job_type_counts"]["PERM"] == 1
+    assert data["submitted_by_type"] == {}
 
 
 def test_preferences_can_be_saved():

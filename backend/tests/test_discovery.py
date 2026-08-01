@@ -53,6 +53,44 @@ def test_infer_job_type_from_description():
     assert DiscoveryService._infer_job_type("", "Some vague description") is None
 
 
+def test_infer_job_type_from_title_beats_perm_label():
+    assert (
+        DiscoveryService._infer_job_type(
+            "PERM",
+            "",
+            title="Programme Manager - 12 Month FTC",
+        )
+        == "CONTRACT"
+    )
+    assert (
+        DiscoveryService._infer_job_type(
+            "PERM",
+            "",
+            title="Enterprise Architect - Outside IR35",
+        )
+        == "CONTRACT"
+    )
+    assert (
+        DiscoveryService._infer_job_type(
+            None,
+            "",
+            title="Director of Solutions Architecture",
+        )
+        is None
+    )
+
+
+def test_infer_job_type_ignores_contract_type_permanent_label():
+    assert (
+        DiscoveryService._infer_job_type(
+            "PERM",
+            "Experience Level: Director; Type: Full Time; Contract type: Permanent.",
+            title="Director- Enterprise Architecture",
+        )
+        == "PERM"
+    )
+
+
 def test_parse_salary():
     assert DiscoveryService._parse_salary("£80,000 - £120,000") == {"salary_min": 80000, "salary_max": 120000}
     assert DiscoveryService._parse_salary("$100000") == {"salary_min": 100000, "salary_max": None}

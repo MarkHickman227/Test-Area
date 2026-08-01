@@ -158,6 +158,22 @@ class LocalRepository:
             counts[s] = counts.get(s, 0) + 1
         return counts
 
+    async def get_job_type_counts(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for job in self._data["jobs"].values():
+            key = job.get("job_type") or "UNKNOWN"
+            counts[key] = counts.get(key, 0) + 1
+        return counts
+
+    async def get_submitted_job_type_counts(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for job in self._data["jobs"].values():
+            if job.get("status") not in {"SUBMITTED", "INTERVIEW", "OFFER"}:
+                continue
+            key = job.get("job_type") or "UNKNOWN"
+            counts[key] = counts.get(key, 0) + 1
+        return counts
+
     # ── persistence ─────────────────────────────────────────────────
 
     def _load(self) -> None:

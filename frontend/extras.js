@@ -27,6 +27,16 @@ async function loadAnalytics() {
       .sort(([, a], [, b]) => b - a)
       .map(([status, count]) => `<tr><td>${escapeHtml(status)}</td><td>${count}</td></tr>`)
       .join("");
+    const typeCounts = data.job_type_counts || {};
+    const submittedByType = data.submitted_by_type || {};
+    const typeRows = Object.entries(typeCounts)
+      .sort(([, a], [, b]) => b - a)
+      .map(([jobType, count]) => `<tr><td>${escapeHtml(jobType)}</td><td>${count}</td></tr>`)
+      .join("");
+    const submittedTypeRows = Object.entries(submittedByType)
+      .sort(([, a], [, b]) => b - a)
+      .map(([jobType, count]) => `<tr><td>${escapeHtml(jobType)}</td><td>${count}</td></tr>`)
+      .join("") || `<tr><td colspan="2">No submitted applications yet.</td></tr>`;
     container.innerHTML = `
       <div class="analytics-grid">
         <div class="stat-card"><span class="stat-number">${data.total_jobs}</span><span class="stat-label">Total jobs</span></div>
@@ -34,6 +44,10 @@ async function loadAnalytics() {
         <div class="stat-card"><span class="stat-number">${data.interviews}</span><span class="stat-label">Interviews</span></div>
         <div class="stat-card"><span class="stat-number">${data.offers}</span><span class="stat-label">Offers</span></div>
       </div>
+      <h3>Job type mix (all jobs)</h3>
+      <table class="analytics-table"><thead><tr><th>Type</th><th>Count</th></tr></thead><tbody>${typeRows}</tbody></table>
+      <h3>Applied / submitted by type</h3>
+      <table class="analytics-table"><thead><tr><th>Type</th><th>Count</th></tr></thead><tbody>${submittedTypeRows}</tbody></table>
       <h3>Status breakdown</h3>
       <table class="analytics-table"><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody>${rows}</tbody></table>`;
   } catch (error) {

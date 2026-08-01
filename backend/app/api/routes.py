@@ -158,9 +158,13 @@ async def save_artifact(job_id: UUID, request: ArtifactSaveRequest, repository: 
 async def get_analytics(repository: Repo) -> dict[str, object]:
     counts = await repository.get_status_counts()
     total = sum(counts.values())
+    job_type_counts = await repository.get_job_type_counts()
+    submitted_by_type = await repository.get_submitted_job_type_counts()
     return {
         "total_jobs": total,
         "status_counts": counts,
+        "job_type_counts": job_type_counts,
+        "submitted_by_type": submitted_by_type,
         "submitted": counts.get("SUBMITTED", 0),
         "interviews": counts.get("INTERVIEW", 0),
         "offers": counts.get("OFFER", 0),
