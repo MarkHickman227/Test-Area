@@ -73,6 +73,7 @@ async def health(
             )
         ),
         "supabase_configured": settings.supabase_configured,
+        "database_configured": getattr(settings, "database_configured", False),
         "anthropic_configured": settings.anthropic_configured,
         "perplexity_configured": settings.perplexity_configured,
         "scheduler_enabled": settings.scheduler_enabled,
