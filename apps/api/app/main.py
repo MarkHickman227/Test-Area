@@ -25,7 +25,9 @@ from app.routers import (
     billing,
     generations,
     health,
+    launch,
     library,
+    ops,
     payments,
 )
 from app.seed import seed_dev_users, seed_reference_data
@@ -103,6 +105,8 @@ def create_app() -> FastAPI:
     application.include_router(payments.router)
     application.include_router(account.router)
     application.include_router(admin.router)
+    application.include_router(ops.router)
+    application.include_router(launch.router)
     return application
 
 

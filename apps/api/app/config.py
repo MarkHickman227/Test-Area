@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     job_timeout_seconds: int = 180
     promotional_grant_credits: int = 40
 
+    invite_only: bool = False
+    blocked_countries: str = ""
+    auth_rate_limit_per_minute: int = 20
+    generate_rate_limit_per_minute: int = 12
+    blocked_prompt_restrict_after: int = 8
+    default_plan_id: str = "standard"
+    worker_slots: int = 1
+
     csrf_cookie_name: str = "pc_csrf"
     session_cookie_name: str = "pc_session"
     cookie_secure: bool = False

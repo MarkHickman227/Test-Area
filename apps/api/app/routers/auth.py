@@ -15,6 +15,11 @@ from app.schemas.auth import (
     UserPublic,
     VerifyEmailRequest,
 )
+from app.services.access import (
+    assert_country_allowed,
+    check_rate_limit,
+    request_country,
+)
 from app.services.auth import AuthService
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
@@ -30,12 +35,21 @@ def register(
     request: Request,
     auth: AuthService = Depends(get_auth_service),
 ):
+    settings = get_settings()
+    check_rate_limit(
+        f"register:{request.client.host if request.client else 'unknown'}",
+        settings.auth_rate_limit_per_minute,
+    )
+    country = request_country(request)
+    assert_country_allowed(settings, country)
     user = auth.register(
         payload.email,
         payload.password,
         payload.acceptances.model_dump(),
         ip=request.client.host if request.client else None,
         request_id=getattr(request.state, "request_id", None),
+        invite_code=payload.invite_code,
+        country_code=country,
     )
     return {"user": _user_public(user)}
 
@@ -48,6 +62,11 @@ def login(
     auth: AuthService = Depends(get_auth_service),
 ):
     settings = get_settings()
+    check_rate_limit(
+        f"login:{request.client.host if request.client else 'unknown'}",
+        settings.auth_rate_limit_per_minute,
+    )
+    assert_country_allowed(settings, request_country(request))
     user, session, raw = auth.login(
         payload.email,
         payload.password,

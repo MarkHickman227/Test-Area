@@ -69,6 +69,7 @@ def get_account(
         "role": ctx.user.role,
         "display_name": ctx.user.display_name,
         "age_verification_status": ctx.user.age_verification_status,
+        "plan_id": ctx.user.plan_id,
         "balance": ledger_balance(db, ctx.user.id),
         "consents": [
             {

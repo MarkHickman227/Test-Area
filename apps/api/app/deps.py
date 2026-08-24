@@ -34,6 +34,9 @@ def reset_singletons() -> None:
     global _mail, _storage
     _mail = None
     _storage = None
+    from app.services.access import reset_rate_limits
+
+    reset_rate_limits()
 
 
 def get_storage(settings: Settings = Depends(get_settings)) -> StorageBackend:

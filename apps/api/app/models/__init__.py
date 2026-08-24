@@ -27,6 +27,13 @@ from app.models.system import (
     DeletionRequest,
     SystemSetting,
 )
+from app.models.growth import (
+    AbuseEvent,
+    InviteCode,
+    Subscription,
+    SupportTicket,
+    WaitlistEntry,
+)
 from app.models.user import (
     AgeVerification,
     AuthIdentity,
@@ -73,6 +80,11 @@ __all__ = [
     "UserRole",
     "UserStatus",
     "Visibility",
+    "WaitlistEntry",
+    "InviteCode",
+    "Subscription",
+    "SupportTicket",
+    "AbuseEvent",
     "WorkflowTemplate",
     "new_uuid",
     "utcnow",

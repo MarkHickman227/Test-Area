@@ -13,6 +13,8 @@ export function Shell({ children }: { children: ReactNode }) {
           <Link href="/generate">Workspace</Link>
           <Link href="/library">Library</Link>
           <Link href="/account">Account</Link>
+          <Link href="/waitlist">Waitlist</Link>
+          <Link href="/admin">Admin</Link>
           <Link href="/login">Sign in</Link>
         </div>
       </nav>

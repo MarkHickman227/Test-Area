@@ -17,6 +17,7 @@ class CreateGenerationRequest(APIModel):
     resolution: str
     image_count: int = Field(ge=1, le=4)
     seed: int | None = None
+    priority: bool = False
 
 
 class GenerationOptions(APIModel):

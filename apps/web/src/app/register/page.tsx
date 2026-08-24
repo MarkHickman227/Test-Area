@@ -25,6 +25,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           email: form.get("email"),
           password: form.get("password"),
+          invite_code: form.get("invite_code") || null,
           acceptances: VERSIONS,
         }),
       });
@@ -52,6 +53,8 @@ export default function RegisterPage() {
       <input name="email" type="email" required autoComplete="email" />
       <label>Password (10+ characters)</label>
       <input name="password" type="password" required minLength={10} autoComplete="new-password" />
+      <label>Invite code</label>
+      <input name="invite_code" placeholder="Required only when the waitlist is closed" />
       <p className="notice" style={{ marginTop: "1rem" }}>
         By continuing you accept the current{" "}
         <Link href="/policies/terms">Terms</Link>, <Link href="/policies/privacy">Privacy Notice</Link>,{" "}

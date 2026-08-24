@@ -1,12 +1,45 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import { api } from "@/lib/api";
+
 export default function SupportPage() {
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    try {
+      await api("/v1/support/tickets", {
+        method: "POST",
+        body: JSON.stringify({
+          email: form.get("email"),
+          subject: form.get("subject"),
+          body: form.get("body"),
+          category: "account",
+        }),
+      });
+      setDone(true);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   return (
-    <div className="card">
+    <form className="card" style={{ maxWidth: 560 }} onSubmit={onSubmit}>
       <h1>Support</h1>
       <p className="muted">
-        Report account issues from your signed-in account. Support staff cannot view generated images by default.
-        For suspected illegal content, use the report control on an output or contact the operator through the
-        published incident channel before launch.
+        Support staff cannot view generated images by default. For suspected illegal content, use Report on an output.
       </p>
-    </div>
+      <label>Email</label>
+      <input name="email" type="email" required />
+      <label>Subject</label>
+      <input name="subject" required />
+      <label>Details</label>
+      <textarea name="body" required />
+      {error ? <p className="error">{error}</p> : null}
+      {done ? <p className="ok">Ticket received.</p> : <button type="submit">Send</button>}
+    </form>
   );
 }

@@ -42,7 +42,30 @@ def reset_engine() -> None:
 def init_db() -> None:
     import app.models  # noqa: F401
 
-    Base.metadata.create_all(bind=get_engine())
+    engine = get_engine()
+    Base.metadata.create_all(bind=engine)
+    _patch_sqlite_columns(engine)
+
+
+def _patch_sqlite_columns(engine) -> None:
+    if engine.dialect.name != "sqlite":
+        return
+    patches = [
+        ("users", "plan_id", "VARCHAR(64) DEFAULT 'standard'"),
+        ("users", "country_code", "VARCHAR(8)"),
+        ("users", "invite_code", "VARCHAR(64)"),
+        ("users", "blocked_prompt_count", "INTEGER DEFAULT 0 NOT NULL"),
+        ("plans", "allows_priority", "BOOLEAN DEFAULT 0 NOT NULL"),
+        ("plans", "hourly_job_limit", "INTEGER DEFAULT 20 NOT NULL"),
+        ("plans", "monthly_credits", "INTEGER DEFAULT 40 NOT NULL"),
+        ("plans", "description", "VARCHAR(240) DEFAULT ''"),
+    ]
+    with engine.begin() as conn:
+        for table, column, ddl in patches:
+            rows = conn.exec_driver_sql(f"PRAGMA table_info({table})").fetchall()
+            names = {row[1] for row in rows}
+            if rows and column not in names:
+                conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
 
 
 def get_db():

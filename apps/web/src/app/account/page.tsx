@@ -26,7 +26,7 @@ export default function AccountPage() {
         <h1>Account</h1>
         <p>{account.email}</p>
         <p className="muted">
-          Status {account.status} · age {account.age_verification_status} · role {account.role}
+          Status {account.status} · age {account.age_verification_status} · role {account.role} · plan {account.plan_id || "standard"}
         </p>
         <p>
           Balance <span className="stat">{account.balance}</span> credits

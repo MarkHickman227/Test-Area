@@ -30,6 +30,11 @@ from app.services.pricing import (
     PRICING_RULE_VERSION,
 )
 from app.crypto import get_crypto
+from app.services.access import (
+    assert_country_allowed,
+    check_rate_limit,
+    request_country,
+)
 
 router = APIRouter(prefix="/v1/generations", tags=["generations"])
 options_router = APIRouter(prefix="/v1/generation", tags=["generations"])
@@ -147,6 +152,12 @@ def create_job(
     db: Session = Depends(get_db),
     storage=Depends(get_storage),
 ):
+    settings = get_settings()
+    assert_country_allowed(settings, request_country(request))
+    check_rate_limit(
+        f"generate:{ctx.user.id}",
+        settings.generate_rate_limit_per_minute,
+    )
     job = jobs.create(
         ctx.user,
         payload.model_dump(),

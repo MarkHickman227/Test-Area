@@ -18,12 +18,14 @@ from app.models.enums import (
     QueueClass,
     UserStatus,
 )
+from app.models.billing import Plan
 from app.models.generation import (
     GenerationJob,
     ModelProfile,
     StylePreset,
     WorkflowTemplate,
 )
+from app.models.growth import AbuseEvent
 from app.models.moderation import ModerationEvent
 from app.models.user import User
 from app.services.audit import write_audit
@@ -54,6 +56,7 @@ class JobService:
         request_id: str | None = None,
     ) -> GenerationJob:
         self._assert_can_generate(user)
+        self._assert_plan_capacity(user, int(payload.get("image_count") or 1))
         existing = self.db.scalar(
             select(GenerationJob).where(
                 GenerationJob.user_id == user.id,
@@ -134,11 +137,19 @@ class JobService:
                 }
             ),
         }
+        plan = self.db.get(Plan, user.plan_id or self.settings.default_plan_id)
+        wants_priority = bool(payload.get("priority")) and bool(
+            plan and plan.allows_priority
+        )
+        priority_multiplier = (
+            float(plan.priority_multiplier) if wants_priority and plan else 1.0
+        )
         cost = calculate_credit_cost(
             PricingInput(
                 base_model_cost=profile.base_credit_cost,
                 resolution=resolution,
                 image_count=image_count,
+                priority_multiplier=priority_multiplier,
                 workflow_multiplier=float(template.cost_multiplier),
             )
         )
@@ -163,7 +174,7 @@ class JobService:
             policy_decision=policy.decision.value,
             policy_score=policy.score,
             moderation_state=ModerationState.NONE,
-            queue_class=QueueClass.STANDARD,
+            queue_class=QueueClass.PRIORITY if wants_priority else QueueClass.STANDARD,
             submitted_at=utcnow(),
         )
         self.db.add(job)
@@ -182,6 +193,16 @@ class JobService:
         if policy.decision == PolicyDecision.BLOCK:
             job.status = JobStatus.BLOCKED
             job.moderation_state = ModerationState.REJECTED
+            user.blocked_prompt_count = (user.blocked_prompt_count or 0) + 1
+            self.db.add(
+                AbuseEvent(
+                    user_id=user.id,
+                    kind="prompt_blocked",
+                    detail="policy_block",
+                )
+            )
+            if user.blocked_prompt_count >= self.settings.blocked_prompt_restrict_after:
+                user.status = UserStatus.RESTRICTED
             write_audit(
                 self.db,
                 action="job.blocked",
@@ -317,6 +338,54 @@ class JobService:
         if user.status != UserStatus.ACTIVE:
             raise AppError(
                 "ACCOUNT_NOT_ACTIVE", "This account cannot generate images.", 403
+            )
+
+    def _assert_plan_capacity(self, user: User, image_count: int) -> None:
+        plan = self.db.get(Plan, user.plan_id or self.settings.default_plan_id)
+        max_images = plan.max_images_per_job if plan else 4
+        if image_count > max_images:
+            raise AppError(
+                "PLAN_LIMIT",
+                "That image count is not included in your current plan.",
+                403,
+            )
+        concurrent = int(
+            self.db.scalar(
+                select(func.count())
+                .select_from(GenerationJob)
+                .where(
+                    GenerationJob.user_id == user.id,
+                    GenerationJob.status.in_(
+                        [JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.POST_PROCESSING]
+                    ),
+                )
+            )
+            or 0
+        )
+        if plan and concurrent >= plan.max_concurrent_jobs:
+            raise AppError(
+                "PLAN_LIMIT",
+                "You already have the maximum number of jobs in progress.",
+                429,
+            )
+        hourly_limit = plan.hourly_job_limit if plan else 20
+        cutoff = utcnow() - timedelta(hours=1)
+        hourly = int(
+            self.db.scalar(
+                select(func.count())
+                .select_from(GenerationJob)
+                .where(
+                    GenerationJob.user_id == user.id,
+                    GenerationJob.submitted_at >= cutoff,
+                )
+            )
+            or 0
+        )
+        if hourly >= hourly_limit:
+            raise AppError(
+                "PLAN_LIMIT",
+                "Hourly generation limit reached for this plan.",
+                429,
             )
 
     def expire_stale_queued(self, max_age_seconds: int = 3600) -> int:

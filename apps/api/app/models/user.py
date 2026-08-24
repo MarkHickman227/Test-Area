@@ -42,6 +42,12 @@ class User(Base, TimestampMixin):
     mfa_secret_encrypted: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     display_name: Mapped[Optional[str]] = mapped_column(String(80))
+    plan_id: Mapped[str] = mapped_column(String(64), nullable=False, default="standard")
+    country_code: Mapped[Optional[str]] = mapped_column(String(8))
+    invite_code: Mapped[Optional[str]] = mapped_column(String(64))
+    blocked_prompt_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
 
     sessions: Mapped[list["Session"]] = relationship(back_populates="user")
     identities: Mapped[list["AuthIdentity"]] = relationship(back_populates="user")

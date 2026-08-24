@@ -8,7 +8,7 @@ from app.config import get_settings
 from app.db import get_db
 from app.deps import AuthContext, require_auth
 from app.errors import AppError
-from app.models.billing import CreditLedger
+from app.models.billing import CreditLedger, Plan
 from app.models.enums import AgeVerificationStatus, UserStatus
 from app.schemas.billing import (
     BalanceResponse,
@@ -64,6 +64,37 @@ def ledger(ctx: AuthContext = Depends(require_auth), db: Session = Depends(get_d
         )
         for row in rows
     ]
+
+
+@router.get("/plans")
+def plans(ctx: AuthContext = Depends(require_auth), db: Session = Depends(get_db)):
+    rows = db.scalars(select(Plan).where(Plan.active.is_(True))).all()
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "max_images_per_job": p.max_images_per_job,
+            "allows_priority": p.allows_priority,
+            "hourly_job_limit": p.hourly_job_limit,
+            "monthly_credits": p.monthly_credits,
+            "current": p.id == ctx.user.plan_id,
+            "paid": p.id != "standard",
+            "available": p.id == "standard" or get_settings().payments_enabled,
+        }
+        for p in rows
+    ]
+
+
+@router.post("/subscribe")
+def subscribe(payload: CheckoutRequest, ctx: AuthContext = Depends(require_auth)):
+    if payload.product_id != "standard" and not get_settings().payments_enabled:
+        raise AppError(
+            "PAYMENTS_NOT_ENABLED",
+            "Paid plans stay disabled until a processor approves this service.",
+            503,
+        )
+    raise AppError("PAYMENTS_NOT_ENABLED", "Paid credit purchase is not enabled.", 503)
 
 
 @router.get("/products", response_model=list[Product])

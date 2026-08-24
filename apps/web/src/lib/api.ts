@@ -28,6 +28,7 @@ export type Account = {
   role: string;
   display_name: string | null;
   age_verification_status: string;
+  plan_id?: string;
   balance: number;
   policy_versions: Record<string, string>;
 };

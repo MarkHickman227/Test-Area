@@ -1,78 +1,77 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import Link from "next/link";
 
-type Queue = {
-  counts: Record<string, number>;
-  held_jobs: { id: string; user_id: string; status: string; policy_decision: string }[];
-  worker_health: string;
-};
+type Capacity = { queue_depth: number; queue_max_depth: number; running: number; worker_slots: number; headroom: number };
+type Finance = { payments_enabled: boolean; user_count: number; open_holds: number };
 
-export default function AdminPage() {
-  const [queue, setQueue] = useState<Queue | null>(null);
+export default function AdminHome() {
+  const [capacity, setCapacity] = useState<Capacity | null>(null);
+  const [finance, setFinance] = useState<Finance | null>(null);
   const [error, setError] = useState("");
-  const [rationale, setRationale] = useState("Reviewed in moderator console.");
 
   useEffect(() => {
-    api<Queue>("/v1/admin/queue").then(setQueue).catch((err) => setError((err as Error).message));
+    api<Capacity>("/v1/admin/capacity").then(setCapacity).catch((err) => setError((err as Error).message));
+    api<Finance>("/v1/admin/finance/summary").then(setFinance).catch(() => undefined);
   }, []);
-
-  async function decide(jobId: string, decision: string) {
-    await api(`/v1/admin/jobs/${jobId}/decision`, {
-      method: "POST",
-      body: JSON.stringify({ decision, reason_code: decision, rationale }),
-    });
-    setQueue(await api<Queue>("/v1/admin/queue"));
-  }
-
-  if (error) return <p className="error">{error}</p>;
-  if (!queue) return <p className="muted">Loading operator console…</p>;
 
   return (
     <div>
       <p className="kicker">Operator</p>
-      <h1>Queues, workers, moderation</h1>
-      <p className="muted">Worker health: {queue.worker_health}. Access is audited.</p>
-      <div className="row" style={{ margin: "1rem 0" }}>
-        {Object.entries(queue.counts).map(([status, n]) => (
-          <div key={status} className="card" style={{ minWidth: 120, padding: "0.8rem" }}>
-            <div className="muted">{status}</div>
-            <div className="stat">{n}</div>
-          </div>
-        ))}
+      <h1>Operations</h1>
+      {error ? <p className="error">{error}</p> : null}
+      <div className="row" style={{ marginBottom: "1rem" }}>
+        <Link className="button secondary" href="/admin/moderation">
+          Moderation
+        </Link>
+        <Link className="button secondary" href="/admin/support">
+          Support
+        </Link>
       </div>
-      <div className="card">
-        <h2>Held jobs</h2>
-        <label>Decision rationale</label>
-        <input value={rationale} onChange={(e) => setRationale(e.target.value)} />
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Job</th>
-              <th>Policy</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {queue.held_jobs.map((job) => (
-              <tr key={job.id}>
-                <td>{job.id.slice(0, 8)}</td>
-                <td>{job.policy_decision}</td>
-                <td className="row">
-                  <button type="button" onClick={() => decide(job.id, "APPROVE")}>
-                    Approve
-                  </button>
-                  <button type="button" className="secondary" onClick={() => decide(job.id, "BLOCK")}>
-                    Block
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {queue.held_jobs.length === 0 ? <p className="muted">No held jobs.</p> : null}
+      <div className="grid grid-2">
+        <div className="card">
+          <h2>GPU / queue</h2>
+          {capacity ? (
+            <ul className="muted">
+              <li>Queue {capacity.queue_depth} / {capacity.queue_max_depth}</li>
+              <li>Running {capacity.running} / {capacity.worker_slots} slots</li>
+              <li>Headroom {capacity.headroom}</li>
+            </ul>
+          ) : (
+            <p className="muted">Loading capacity…</p>
+          )}
+        </div>
+        <div className="card">
+          <h2>Finance</h2>
+          <p className="muted">Payments enabled: {String(finance?.payments_enabled ?? false)}</p>
+          <p className="muted">Ledger users: {finance?.user_count ?? "—"} · open holds {finance?.open_holds ?? "—"}</p>
+          <p className="notice">Paid checkout remains disabled until a processor confirms the business is permitted.</p>
+        </div>
       </div>
+      <InviteForm />
     </div>
+  );
+}
+
+function InviteForm() {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    await api("/v1/admin/invites", {
+      method: "POST",
+      body: JSON.stringify({ code: form.get("code"), max_uses: Number(form.get("max_uses") || 1) }),
+    });
+  }
+  return (
+    <form className="card" onSubmit={onSubmit} style={{ marginTop: "1rem" }}>
+      <h2>Create invite</h2>
+      <label>Code</label>
+      <input name="code" required />
+      <label>Max uses</label>
+      <input name="max_uses" type="number" defaultValue={1} />
+      <button type="submit">Save invite</button>
+    </form>
   );
 }

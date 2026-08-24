@@ -71,6 +71,8 @@ class AuthService:
         acceptances: dict[str, str],
         ip: str | None,
         request_id: str | None = None,
+        invite_code: str | None = None,
+        country_code: str | None = None,
     ) -> User:
         email_n = normalize_email(email)
         if self.db.scalar(select(User).where(User.email == email_n)):
@@ -91,12 +93,18 @@ class AuthService:
                     "CONSENT_REQUIRED",
                     "You must accept the current terms, privacy notice, and content policy.",
                 )
+        from app.services.access import consume_invite
+
+        invite = consume_invite(self.db, invite_code, self.settings)
         user = User(
             email=email_n,
             password_hash=hash_password(password),
             status=UserStatus.PENDING_EMAIL_VERIFICATION,
             role=UserRole.USER,
             age_verification_status=AgeVerificationStatus.NOT_STARTED,
+            plan_id=self.settings.default_plan_id,
+            country_code=country_code,
+            invite_code=invite.code if invite else None,
         )
         self.db.add(user)
         self.db.flush()

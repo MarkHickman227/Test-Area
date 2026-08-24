@@ -11,6 +11,7 @@ class RegisterRequest(APIModel):
     email: EmailStr
     password: str = Field(min_length=10, max_length=200)
     acceptances: ConsentPayload
+    invite_code: str | None = None
 
 
 class LoginRequest(APIModel):
@@ -44,6 +45,7 @@ class UserPublic(APIModel):
     age_verified_at: datetime | None
     age_verification_status: str
     mfa_enabled: bool
+    plan_id: str | None = None
 
 
 class SessionResponse(APIModel):

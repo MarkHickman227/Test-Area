@@ -27,6 +27,12 @@ class Plan(Base, TimestampMixin):
         Float, nullable=False, default=1.0
     )
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    allows_priority: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    hourly_job_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
+    monthly_credits: Mapped[int] = mapped_column(Integer, nullable=False, default=40)
+    description: Mapped[str] = mapped_column(String(240), nullable=False, default="")
 
 
 class CreditLedger(Base, TimestampMixin):
