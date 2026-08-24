@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# Env and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Data and runtime
+data/
+storage/
+backups/
+*.db
+*.sqlite
+tmp/
+.celery/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Test artifacts
+apps/api/.pytest_cache/
+apps/web/test-results/

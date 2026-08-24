@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrivateCanvasWorkflowTemplate",
+  "type": "object",
+  "required": [
+    "workflow_id",
+    "workflow_version",
+    "compatible_model_profile_id",
+    "fixed_graph",
+    "allowed_variable_fields",
+    "parameter_bounds",
+    "output_node_id",
+    "expected_output_types",
+    "content_policy_requirement_level",
+    "cost_multiplier"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "workflow_id": { "type": "string", "minLength": 1 },
+    "workflow_version": { "type": "string", "minLength": 1 },
+    "compatible_model_profile_id": { "type": "string", "minLength": 1 },
+    "fixed_graph": { "type": "object" },
+    "allowed_variable_fields": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "parameter_bounds": { "type": "object" },
+    "output_node_id": { "type": "string" },
+    "expected_output_types": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "content_policy_requirement_level": { "type": "string" },
+    "cost_multiplier": { "type": "number", "minimum": 0 }
+  }
+}
