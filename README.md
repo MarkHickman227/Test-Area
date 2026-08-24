@@ -56,9 +56,15 @@ cd apps/api && PYTHONPATH=. pytest -q
 
 ## Docker
 
-Copy `.env.example` to `.env`, set `ENCRYPTION_KEY` and secrets, then `docker compose up --build`. Networks: `public_net`, `app_net`, `gpu_net`. Only Caddy publishes 80/443.
+Copy `.env.example` to `.env`, set `ENCRYPTION_KEY` and secrets, then `docker compose up --build`. Networks: `public_net`, `app_net`, `gpu_net`. Only Caddy publishes 80/443. Mailhog is bound to `127.0.0.1:8025`.
 
-Optional ComfyUI contract stub (still no model weights): `GENERATION_BACKEND=comfyui docker compose --profile comfyui up --build`.
+Private staging (fail-closed boot, invite-only, mock worker, payments off): see `docs/STAGING.md`.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.staging.yml up --build
+```
+
+Optional ComfyUI contract stub (still no model weights): `GENERATION_BACKEND=comfyui docker compose --profile comfyui up --build`. Staging boot checks reject ComfyUI until a licensed GPU host is attached.
 
 ## Constraints
 

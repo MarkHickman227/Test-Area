@@ -20,6 +20,8 @@
 3. Confirm users, jobs, and output metadata counts
 4. Confirm object store keys still resolve
 
+Staging bring-up and boot refusals: `docs/STAGING.md`.
+
 ## Child-safety escalation
 
 1. Automated BLOCK on minor-indicating prompts

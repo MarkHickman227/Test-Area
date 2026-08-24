@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     allow_sandbox_age_verify: bool = True
 
     payments_enabled: bool = False
+    payments_processor_attested: bool = False
     payment_provider: Literal["none", "sandbox", "stripe"] = "none"
     payment_webhook_secret: str = "dev-payment-webhook"
     stripe_secret_key: str = ""
@@ -102,6 +103,10 @@ class Settings(BaseSettings):
             and self.age_verification_provider == "sandbox"
             and self.is_dev
         )
+
+    @property
+    def effective_cookie_secure(self) -> bool:
+        return True if not self.is_dev else self.cookie_secure
 
 
 @lru_cache

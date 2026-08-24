@@ -189,7 +189,7 @@ def seed_reference_data(db: Session) -> None:
 
 
 def seed_dev_users(db: Session, settings: Settings) -> None:
-    if settings.app_env == "production":
+    if not settings.is_dev:
         return
     admin = db.scalar(
         select(User).where(User.email == settings.dev_admin_email.lower())
@@ -228,7 +228,7 @@ def seed_dev_users(db: Session, settings: Settings) -> None:
         db.add(UserProfile(user_id=user.id))
         grant_welcome_credits(db, user, settings)
     support = db.scalar(select(User).where(User.email == "support@example.com"))
-    if not support and settings.app_env != "production":
+    if not support and settings.is_dev:
         from app.models.base import utcnow
 
         support = User(

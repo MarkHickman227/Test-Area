@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.boot import assert_runtime_safe
 from app.config import get_settings
 from app.db import get_session_factory, init_db
 from app.errors import (
@@ -41,6 +42,7 @@ async def lifespan(app: FastAPI):
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
     )
+    assert_runtime_safe(settings)
     init_db()
     db = get_session_factory()()
     try:
