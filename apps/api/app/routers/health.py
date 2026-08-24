@@ -1,5 +1,9 @@
 from fastapi import APIRouter, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from sqlalchemy import text
+
+from app.db import get_session_factory
+from app.errors import AppError
 
 router = APIRouter(tags=["health"])
 
@@ -24,6 +28,13 @@ def health():
 
 @router.get("/ready")
 def ready():
+    db = get_session_factory()()
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception as exc:
+        raise AppError("NOT_READY", "Database is not ready.", 503) from exc
+    finally:
+        db.close()
     return {"status": "ready"}
 
 

@@ -1,0 +1,55 @@
+# Overlay for a private staging host. Does not enable live payments or GPU models.
+#
+#   cp .env.staging.example .env
+#   # fill secrets, then:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up --build
+#
+# Keep this stack off the public internet until TLS, age vendor, and counsel are in place.
+
+services:
+  api:
+    environment:
+      APP_ENV: staging
+      INVITE_ONLY: "true"
+      ALLOW_SANDBOX_AGE_VERIFY: "false"
+      AGE_VERIFICATION_PROVIDER: http
+      ALLOW_DEV_MFA_BYPASS: "false"
+      REQUIRE_MFA_PRIVILEGED: "true"
+      COOKIE_SECURE: "true"
+      PAYMENTS_ENABLED: "false"
+      PAYMENTS_PROCESSOR_ATTESTED: "false"
+      GENERATION_BACKEND: mock
+      JOB_EXECUTION: celery
+      MAIL_CONSOLE: "false"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready')",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+
+  worker:
+    environment:
+      APP_ENV: staging
+      GENERATION_BACKEND: mock
+      JOB_EXECUTION: celery
+      ALLOW_DEV_MFA_BYPASS: "false"
+
+  postgres:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U privatecanvas"]
+      interval: 5s
+      timeout: 3s
+      retries: 20

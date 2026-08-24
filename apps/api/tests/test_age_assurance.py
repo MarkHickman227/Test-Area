@@ -20,11 +20,11 @@ def test_sandbox_complete_still_works_in_test(client):
 
 
 def test_sandbox_disabled_in_production(client, monkeypatch):
+    register_verify_login(client)
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("ALLOW_SANDBOX_AGE_VERIFY", "true")
     monkeypatch.setenv("AGE_VERIFICATION_PROVIDER", "sandbox")
     get_settings.cache_clear()
-    register_verify_login(client)
     res = client.post(
         "/v1/age-verification/sandbox-complete",
         headers={"X-CSRF-Token": csrf_for(client)},
