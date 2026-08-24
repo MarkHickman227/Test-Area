@@ -19,7 +19,7 @@ Scope: PrivateCanvas control plane, web UI, MockWorker/ComfyUI worker, Postgres,
 4. Direct ComfyUI abuse — GPU network isolated; users cannot submit workflow JSON.
 5. Credit theft / double spend — append-only ledger, idempotent reservations, reconciliation view.
 6. Privileged snooping — RBAC, MFA for privileged roles, audited access, break-glass with reason and TTL.
-7. Webhook forgery — HMAC verification for age-assurance callbacks.
+7. Webhook forgery — HMAC verification for age-assurance and payment callbacks; identity documents and dates of birth are never stored.
 8. CSRF / session theft — HttpOnly session cookie, CSRF header on mutations, SameSite=Lax.
 
 This document is a working draft for engineering, not a completed security sign-off.

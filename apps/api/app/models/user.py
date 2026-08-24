@@ -123,6 +123,7 @@ class AgeVerification(Base, TimestampMixin):
     )
     provider: Mapped[str] = mapped_column(String(64), nullable=False)
     provider_ref_encrypted: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
+    provider_ref_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     assurance_level: Mapped[Optional[str]] = mapped_column(String(32))
     outcome: Mapped[str] = mapped_column(String(32), nullable=False)
     raw_payload_retained: Mapped[bool] = mapped_column(

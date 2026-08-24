@@ -7,7 +7,7 @@ Browser -> Caddy -> Next.js (UI)
                         -> Redis (queue when Celery enabled)
                         -> MinIO / local disk (private originals + thumbs)
                         -> Mail (verification)
-                        -> Age-assurance provider adapter (sandbox in MVP)
+                        -> Age-assurance provider adapter (sandbox locally; HTTP vendor in production)
                         -> worker-control -> MockWorker or ComfyUI (gpu_net)
 ```
 

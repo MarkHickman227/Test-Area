@@ -2,7 +2,9 @@
 
 Working name for a private, adult-only text-to-image service. This repository is the Phase 1 Secure MVP scaffold: age-gated accounts, curated generation, private library, append-only credits, prompt policy, and a MockWorker.
 
-This is not a commercial launch. Payments, production age-assurance, GPU hosting, model licences, and legal review remain go/no-go items.
+This is not a commercial launch. Payments, production age-assurance vendor onboarding, GPU hosting, model licences, and legal review remain go/no-go items.
+
+See `docs/AGE-ASSURANCE.md`. Sandbox completion is disabled in production.
 
 ## Architecture
 
@@ -63,3 +65,4 @@ Optional ComfyUI contract stub (still no model weights): `GENERATION_BACKEND=com
 - Do not copy Stuffer.ai or any third-party product UI, prompts, or workflows
 - Do not commit model weights, identity documents, or production data
 - Do not enable Stripe/live payments without written processor approval. `PAYMENTS_ENABLED` defaults to false. See `docs/PAYMENTS.md`.
+- Do not treat a configured age-assurance vendor as a legal sign-off. See `docs/AGE-ASSURANCE.md`.
