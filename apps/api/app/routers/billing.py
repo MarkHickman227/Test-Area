@@ -7,37 +7,22 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_db
 from app.deps import AuthContext, require_auth
-from app.errors import AppError
 from app.models.billing import CreditLedger, Plan
-from app.models.enums import AgeVerificationStatus, UserStatus
 from app.schemas.billing import (
     BalanceResponse,
     CheckoutRequest,
+    CheckoutSessionResponse,
     LedgerItem,
     Product,
     RefundRequest,
+    SandboxCompleteRequest,
+    SubscribeRequest,
 )
 from app.services.audit import write_audit
 from app.services.credits import ledger_balance
+from app.services.payments import PaymentService, catalog
 
 router = APIRouter(prefix="/v1/billing", tags=["billing"])
-
-PRODUCTS = [
-    Product(
-        id="credits-40",
-        name="40 credits",
-        credits=40,
-        available=False,
-        note="Payments disabled until a processor approves this service.",
-    ),
-    Product(
-        id="credits-120",
-        name="120 credits",
-        credits=120,
-        available=False,
-        note="Payments disabled until a processor approves this service.",
-    ),
-]
 
 
 @router.get("/balance", response_model=BalanceResponse)
@@ -68,6 +53,7 @@ def ledger(ctx: AuthContext = Depends(require_auth), db: Session = Depends(get_d
 
 @router.get("/plans")
 def plans(ctx: AuthContext = Depends(require_auth), db: Session = Depends(get_db)):
+    settings = get_settings()
     rows = db.scalars(select(Plan).where(Plan.active.is_(True))).all()
     return [
         {
@@ -80,45 +66,46 @@ def plans(ctx: AuthContext = Depends(require_auth), db: Session = Depends(get_db
             "monthly_credits": p.monthly_credits,
             "current": p.id == ctx.user.plan_id,
             "paid": p.id != "standard",
-            "available": p.id == "standard" or get_settings().payments_enabled,
+            "available": p.id == "standard" or settings.payments_enabled,
         }
         for p in rows
     ]
 
 
 @router.post("/subscribe")
-def subscribe(payload: CheckoutRequest, ctx: AuthContext = Depends(require_auth)):
-    if payload.product_id != "standard" and not get_settings().payments_enabled:
-        raise AppError(
-            "PAYMENTS_NOT_ENABLED",
-            "Paid plans stay disabled until a processor approves this service.",
-            503,
-        )
-    raise AppError("PAYMENTS_NOT_ENABLED", "Paid credit purchase is not enabled.", 503)
+def subscribe(
+    payload: SubscribeRequest,
+    ctx: AuthContext = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    return PaymentService(db, get_settings()).subscribe(ctx.user, payload.product_id)
 
 
 @router.get("/products", response_model=list[Product])
 def products(_: AuthContext = Depends(require_auth)):
-    return PRODUCTS
+    return catalog(get_settings().payments_enabled)
 
 
-@router.post("/checkout-session")
-def checkout(payload: CheckoutRequest, ctx: AuthContext = Depends(require_auth)):
-    settings = get_settings()
-    if not settings.payments_enabled:
-        raise AppError(
-            "PAYMENTS_NOT_ENABLED", "Paid credit purchase is not enabled.", 503
-        )
-    if (
-        ctx.user.status != UserStatus.ACTIVE
-        or ctx.user.age_verification_status != AgeVerificationStatus.PASSED
-    ):
-        raise AppError(
-            "AGE_VERIFICATION_REQUIRED",
-            "Complete age assurance before purchasing credits.",
-            403,
-        )
-    raise AppError("PAYMENTS_NOT_ENABLED", "Paid credit purchase is not enabled.", 503)
+@router.post("/checkout-session", response_model=CheckoutSessionResponse)
+def checkout(
+    payload: CheckoutRequest,
+    ctx: AuthContext = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    return PaymentService(db, get_settings()).create_checkout(
+        ctx.user, payload.product_id
+    )
+
+
+@router.post("/sandbox-complete")
+def sandbox_complete(
+    payload: SandboxCompleteRequest,
+    ctx: AuthContext = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    return PaymentService(db, get_settings()).complete_sandbox(
+        ctx.user, payload.payment_id
+    )
 
 
 @router.post("/refund-request")

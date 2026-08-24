@@ -7,6 +7,7 @@ def test_waitlist_and_launch_meta(client):
     meta = client.get("/v1/meta/launch")
     assert meta.status_code == 200
     assert meta.json()["payments_enabled"] is False
+    assert meta.json()["payment_provider"] == "none"
     assert meta.json()["generation_backend"] == "mock"
     joined = client.post("/v1/waitlist", json={"email": "wait@example.com"})
     assert joined.status_code == 200
@@ -111,6 +112,7 @@ def test_finance_summary_and_capacity(client):
     fin = client.get("/v1/admin/finance/summary")
     assert fin.status_code == 200
     assert fin.json()["payments_enabled"] is False
+    assert fin.json()["payment_provider"] == "none"
 
 
 def test_support_ticket(client):

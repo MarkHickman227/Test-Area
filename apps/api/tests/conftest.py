@@ -19,6 +19,7 @@ os.environ.setdefault("ALLOW_DEV_MFA_BYPASS", "true")
 os.environ.setdefault("ALLOW_SANDBOX_AGE_VERIFY", "true")
 os.environ.setdefault("MAIL_BACKEND", "console")
 os.environ.setdefault("PAYMENTS_ENABLED", "false")
+os.environ.setdefault("PAYMENT_PROVIDER", "none")
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
 CONSENTS = {

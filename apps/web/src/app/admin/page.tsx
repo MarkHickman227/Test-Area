@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import Link from "next/link";
 
 type Capacity = { queue_depth: number; queue_max_depth: number; running: number; worker_slots: number; headroom: number };
-type Finance = { payments_enabled: boolean; user_count: number; open_holds: number };
+type Finance = { payments_enabled: boolean; payment_provider?: string; user_count: number; open_holds: number };
 
 export default function AdminHome() {
   const [capacity, setCapacity] = useState<Capacity | null>(null);
@@ -45,9 +45,9 @@ export default function AdminHome() {
         </div>
         <div className="card">
           <h2>Finance</h2>
-          <p className="muted">Payments enabled: {String(finance?.payments_enabled ?? false)}</p>
+          <p className="muted">Payments enabled: {String(finance?.payments_enabled ?? false)} · provider {finance?.payment_provider ?? "none"}</p>
           <p className="muted">Ledger users: {finance?.user_count ?? "—"} · open holds {finance?.open_holds ?? "—"}</p>
-          <p className="notice">Paid checkout remains disabled until a processor confirms the business is permitted.</p>
+          <p className="notice">Paid checkout remains disabled until a processor confirms the business is permitted. See docs/PAYMENTS.md. Stripe keys are not approval.</p>
         </div>
       </div>
       <InviteForm />

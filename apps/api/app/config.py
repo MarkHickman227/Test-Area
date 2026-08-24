@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     allow_sandbox_age_verify: bool = True
 
     payments_enabled: bool = False
+    payment_provider: Literal["none", "sandbox", "stripe"] = "none"
+    payment_webhook_secret: str = "dev-payment-webhook"
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_api_base: str = "https://api.stripe.com"
     generation_backend: Literal["mock", "comfyui"] = "mock"
     comfyui_url: str = "http://comfyui:8188"
     comfyui_timeout_seconds: int = 120

@@ -62,4 +62,4 @@ Optional ComfyUI contract stub (still no model weights): `GENERATION_BACKEND=com
 
 - Do not copy Stuffer.ai or any third-party product UI, prompts, or workflows
 - Do not commit model weights, identity documents, or production data
-- Do not enable Stripe/live payments without written processor approval
+- Do not enable Stripe/live payments without written processor approval. `PAYMENTS_ENABLED` defaults to false. See `docs/PAYMENTS.md`.

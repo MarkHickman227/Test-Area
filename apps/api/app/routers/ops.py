@@ -93,6 +93,7 @@ def finance_summary(
     open_holds = sum(int(row.get("open_holds") or 0) for row in reconciled)
     return {
         "payments_enabled": get_settings().payments_enabled,
+        "payment_provider": get_settings().payment_provider,
         "user_count": len(users),
         "open_holds": open_holds,
         "users": reconciled[:100],
