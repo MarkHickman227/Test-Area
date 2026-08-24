@@ -3,8 +3,8 @@
 ## Job stuck in QUEUED
 
 1. Confirm moderation_state is not PENDING_REVIEW.
-2. Check worker process and GPU/MockWorker logs.
-3. If JOB_EXECUTION=inline, restart API.
+2. Check worker process and GPU/MockWorker logs (`GENERATION_BACKEND`, `COMFYUI_URL`).
+3. If JOB_EXECUTION=inline, restart API. If using the ComfyUI profile, confirm the stub/GPU host is reachable only on `gpu_net`.
 4. Expire stale jobs via `JobService.expire_stale_queued`.
 
 ## Credit mismatch

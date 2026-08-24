@@ -8,7 +8,8 @@ This is not a commercial launch. Payments, production age-assurance, GPU hosting
 
 - `apps/web` — Next.js UI
 - `apps/api` — FastAPI control plane
-- `apps/worker` — Celery worker using the same MockWorker protocol a ComfyUI host would implement
+- `apps/worker` — Celery worker (`GENERATION_BACKEND=mock` or `comfyui`)
+- `apps/comfyui-stub` — private ComfyUI HTTP stub for `gpu_net` (no public ports, no weights)
 - `packages/workflows` — pinned workflow templates (users never submit graphs)
 - `infra` — Caddy and Prometheus
 - `docs` — policy drafts, threat model, data flow, runbooks
@@ -54,6 +55,8 @@ cd apps/api && PYTHONPATH=. pytest -q
 ## Docker
 
 Copy `.env.example` to `.env`, set `ENCRYPTION_KEY` and secrets, then `docker compose up --build`. Networks: `public_net`, `app_net`, `gpu_net`. Only Caddy publishes 80/443.
+
+Optional ComfyUI contract stub (still no model weights): `GENERATION_BACKEND=comfyui docker compose --profile comfyui up --build`.
 
 ## Constraints
 

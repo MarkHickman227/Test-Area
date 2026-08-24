@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     allow_sandbox_age_verify: bool = True
 
     payments_enabled: bool = False
+    generation_backend: Literal["mock", "comfyui"] = "mock"
+    comfyui_url: str = "http://comfyui:8188"
+    comfyui_timeout_seconds: int = 120
     job_execution: Literal["inline", "celery"] = "inline"
     require_mfa_privileged: bool = True
     allow_dev_mfa_bypass: bool = True

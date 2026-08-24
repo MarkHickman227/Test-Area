@@ -1,4 +1,4 @@
-"""Celery entrypoint for GPU/host workers. Local MVP uses inline MockWorker."""
+"""Celery entrypoint for GPU/host workers."""
 
 from celery import Celery
 
@@ -6,7 +6,7 @@ from app.config import get_settings
 from app.crypto import get_crypto
 from app.db import get_session_factory, init_db
 from app.deps import get_storage
-from app.jobs.runner import MockWorker
+from app.jobs.factory import make_worker
 
 settings = get_settings()
 celery_app = Celery(
@@ -21,7 +21,7 @@ def process_queue() -> int:
     init_db()
     db = get_session_factory()()
     try:
-        worker = MockWorker(db, settings, get_crypto(), get_storage(settings))
+        worker = make_worker(db, settings, get_crypto(), get_storage(settings))
         return worker.run_available()
     finally:
         db.close()

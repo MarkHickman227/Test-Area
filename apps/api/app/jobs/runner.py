@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import logging
-from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.crypto import CryptoService
-from app.jobs.placeholder import render_placeholder, render_thumbnail
+from app.jobs.backends import ImageBackend, MockBackend, parse_resolution
+from app.jobs.placeholder import render_thumbnail
 from app.models.base import utcnow
 from app.models.enums import JobStatus, ModerationState, ScanStatus, Visibility
 from app.models.generation import GenerationJob, GenerationOutput
@@ -18,11 +18,10 @@ from app.services.jobs import JobService
 from app.services.storage import StorageBackend, new_object_key, sha256_bytes
 
 logger = logging.getLogger("privatecanvas.worker")
-WORKER_ID = "mock-worker-1"
 
 
-class MockWorker:
-    """Executes pinned workflows without a GPU. Emits non-explicit placeholders."""
+class GenerationWorker:
+    """Claim queued jobs, render via a backend, scan, store, complete."""
 
     def __init__(
         self,
@@ -30,12 +29,18 @@ class MockWorker:
         settings: Settings,
         crypto: CryptoService,
         storage: StorageBackend,
+        backend: ImageBackend | None = None,
     ) -> None:
         self.db = db
         self.settings = settings
         self.crypto = crypto
         self.storage = storage
+        self.backend = backend or MockBackend()
         self.jobs = JobService(db, settings, crypto)
+
+    @property
+    def worker_id(self) -> str:
+        return self.backend.worker_id
 
     def claim_next(self) -> GenerationJob | None:
         stmt = (
@@ -54,8 +59,7 @@ class MockWorker:
             return None
         job.status = JobStatus.RUNNING
         job.started_at = utcnow()
-        job.worker_id = WORKER_ID
-        job.comfy_prompt_id = str(uuid4())
+        job.worker_id = self.worker_id
         if self.settings.capture_on == "running":
             self.jobs.capture_if_needed(job)
         write_audit(
@@ -80,10 +84,10 @@ class MockWorker:
             self.db.commit()
 
     def _process_inner(self, job: GenerationJob) -> None:
-        width, height = _parse_resolution(job.parameters.get("resolution", "768x768"))
+        images = self.backend.render(job)
+        width, height = parse_resolution(job.parameters.get("resolution", "768x768"))
         outputs: list[GenerationOutput] = []
-        for index in range(job.image_count):
-            png = render_placeholder(job.id, width, height, index)
+        for index, png in enumerate(images):
             thumb = render_thumbnail(png)
             original_key = new_object_key(job.user_id, job.id, f"original-{index}")
             thumb_key = new_object_key(job.user_id, job.id, f"thumb-{index}")
@@ -113,7 +117,7 @@ class MockWorker:
                 stage="output",
                 decision="ALLOW",
                 rule_hits=[],
-                notes="placeholder_scan_clear",
+                notes=f"{self.worker_id}_scan_clear",
             )
         )
         self.db.flush()
@@ -126,7 +130,7 @@ class MockWorker:
             action="job.completed",
             target_type="generation_job",
             target_id=job.id,
-            metadata={"outputs": len(outputs)},
+            metadata={"outputs": len(outputs), "backend": self.worker_id},
         )
         self.db.commit()
 
@@ -141,9 +145,17 @@ class MockWorker:
         return processed
 
 
-def _parse_resolution(value: str) -> tuple[int, int]:
-    width_s, height_s = value.lower().split("x")
-    return int(width_s), int(height_s)
+class MockWorker(GenerationWorker):
+    """Back-compat alias used by docs and existing imports."""
+
+    def __init__(
+        self,
+        db: Session,
+        settings: Settings,
+        crypto: CryptoService,
+        storage: StorageBackend,
+    ) -> None:
+        super().__init__(db, settings, crypto, storage, backend=MockBackend())
 
 
 def process_job_by_id(
@@ -153,7 +165,9 @@ def process_job_by_id(
     storage: StorageBackend,
     job_id: str,
 ) -> None:
-    worker = MockWorker(db, settings, crypto, storage)
+    from app.jobs.factory import make_worker
+
+    worker = make_worker(db, settings, crypto, storage)
     job = db.get(GenerationJob, job_id)
     if not job:
         return
@@ -163,8 +177,12 @@ def process_job_by_id(
     ):
         job.status = JobStatus.RUNNING
         job.started_at = utcnow()
-        job.worker_id = WORKER_ID
+        job.worker_id = worker.worker_id
         if settings.capture_on == "running":
             JobService(db, settings, crypto).capture_if_needed(job)
         db.commit()
         worker.process(job)
+
+
+# Re-export for older tests/docs.
+_parse_resolution = parse_resolution

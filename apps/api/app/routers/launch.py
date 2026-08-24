@@ -40,6 +40,7 @@ def launch_meta():
     return {
         "invite_only": settings.invite_only,
         "payments_enabled": settings.payments_enabled,
+        "generation_backend": settings.generation_backend,
         "age_provider": settings.age_verification_provider,
         "default_plan_id": settings.default_plan_id,
     }
