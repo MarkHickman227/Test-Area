@@ -59,6 +59,7 @@ def _patch_sqlite_columns(engine) -> None:
         ("plans", "hourly_job_limit", "INTEGER DEFAULT 20 NOT NULL"),
         ("plans", "monthly_credits", "INTEGER DEFAULT 40 NOT NULL"),
         ("plans", "description", "VARCHAR(240) DEFAULT ''"),
+        ("age_verifications", "provider_ref_hash", "VARCHAR(64)"),
     ]
     with engine.begin() as conn:
         for table, column, ddl in patches:

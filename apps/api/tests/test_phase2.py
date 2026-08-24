@@ -9,6 +9,8 @@ def test_waitlist_and_launch_meta(client):
     assert meta.json()["payments_enabled"] is False
     assert meta.json()["payment_provider"] == "none"
     assert meta.json()["generation_backend"] == "mock"
+    assert meta.json()["age_provider"] == "sandbox"
+    assert meta.json()["sandbox_age"] is True
     joined = client.post("/v1/waitlist", json={"email": "wait@example.com"})
     assert joined.status_code == 200
     again = client.post("/v1/waitlist", json={"email": "wait@example.com"})

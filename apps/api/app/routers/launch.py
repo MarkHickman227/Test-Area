@@ -43,6 +43,7 @@ def launch_meta():
         "payment_provider": settings.payment_provider,
         "generation_backend": settings.generation_backend,
         "age_provider": settings.age_verification_provider,
+        "sandbox_age": settings.sandbox_age_allowed,
         "default_plan_id": settings.default_plan_id,
     }
 

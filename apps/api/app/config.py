@@ -36,8 +36,10 @@ class Settings(BaseSettings):
     smtp_from: str = "noreply@localhost"
     mail_console: bool = True
 
-    age_verification_provider: str = "sandbox"
+    age_verification_provider: Literal["sandbox", "http"] = "sandbox"
     age_verification_webhook_secret: str = "dev-webhook-secret"
+    age_verification_api_url: str = ""
+    age_verification_api_key: str = ""
     allow_sandbox_age_verify: bool = True
 
     payments_enabled: bool = False
@@ -92,6 +94,14 @@ class Settings(BaseSettings):
     @property
     def is_dev(self) -> bool:
         return self.app_env in {"development", "test"}
+
+    @property
+    def sandbox_age_allowed(self) -> bool:
+        return (
+            self.allow_sandbox_age_verify
+            and self.age_verification_provider == "sandbox"
+            and self.is_dev
+        )
 
 
 @lru_cache
