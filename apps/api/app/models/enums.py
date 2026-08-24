@@ -1,0 +1,113 @@
+from __future__ import annotations
+
+from enum import StrEnum
+
+
+class UserStatus(StrEnum):
+    PENDING_EMAIL_VERIFICATION = "PENDING_EMAIL_VERIFICATION"
+    PENDING_AGE_VERIFICATION = "PENDING_AGE_VERIFICATION"
+    ACTIVE = "ACTIVE"
+    RESTRICTED = "RESTRICTED"
+    SUSPENDED = "SUSPENDED"
+    BANNED = "BANNED"
+    DELETION_PENDING = "DELETION_PENDING"
+    DELETED = "DELETED"
+
+
+class UserRole(StrEnum):
+    USER = "USER"
+    SUPPORT = "SUPPORT"
+    MODERATOR = "MODERATOR"
+    FINANCE = "FINANCE"
+    SYSTEM_ADMIN = "SYSTEM_ADMIN"
+    SUPER_ADMIN = "SUPER_ADMIN"
+
+
+class AgeVerificationStatus(StrEnum):
+    NOT_STARTED = "NOT_STARTED"
+    PENDING = "PENDING"
+    PASSED = "PASSED"
+    FAILED = "FAILED"
+    INCONCLUSIVE = "INCONCLUSIVE"
+
+
+class JobStatus(StrEnum):
+    DRAFT = "DRAFT"
+    VALIDATING = "VALIDATING"
+    BLOCKED = "BLOCKED"
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    POST_PROCESSING = "POST_PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+
+
+class PolicyDecision(StrEnum):
+    ALLOW = "ALLOW"
+    ALLOW_WITH_LOG = "ALLOW_WITH_LOG"
+    HOLD_FOR_REVIEW = "HOLD_FOR_REVIEW"
+    BLOCK = "BLOCK"
+    SUSPEND_ESCALATE = "SUSPEND_ESCALATE"
+
+
+class ModerationState(StrEnum):
+    NONE = "NONE"
+    PENDING_REVIEW = "PENDING_REVIEW"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    ESCALATED = "ESCALATED"
+
+
+class LedgerEventType(StrEnum):
+    PROMOTIONAL_GRANT = "PROMOTIONAL_GRANT"
+    PURCHASED_CREDITS = "PURCHASED_CREDITS"
+    CREDIT_RESERVATION = "CREDIT_RESERVATION"
+    CREDIT_CAPTURE = "CREDIT_CAPTURE"
+    CREDIT_RELEASE = "CREDIT_RELEASE"
+    MANUAL_ADJUSTMENT = "MANUAL_ADJUSTMENT"
+    REFUND = "REFUND"
+    CHARGEBACK_REVERSAL = "CHARGEBACK_REVERSAL"
+    EXPIRY = "EXPIRY"
+
+
+class ScanStatus(StrEnum):
+    PENDING = "PENDING"
+    CLEAR = "CLEAR"
+    FLAGGED = "FLAGGED"
+    BLOCKED = "BLOCKED"
+
+
+class Visibility(StrEnum):
+    PRIVATE = "PRIVATE"
+
+
+class QueueClass(StrEnum):
+    STANDARD = "STANDARD"
+    PRIORITY = "PRIORITY"
+
+
+class PrivilegedRoles:
+    ALL = {
+        UserRole.SUPPORT,
+        UserRole.MODERATOR,
+        UserRole.FINANCE,
+        UserRole.SYSTEM_ADMIN,
+        UserRole.SUPER_ADMIN,
+    }
+    MFA_REQUIRED = {
+        UserRole.MODERATOR,
+        UserRole.FINANCE,
+        UserRole.SYSTEM_ADMIN,
+        UserRole.SUPER_ADMIN,
+    }
+    CONTENT_ACCESS = {UserRole.MODERATOR, UserRole.SUPER_ADMIN, UserRole.SYSTEM_ADMIN}
+    FINANCIAL = {UserRole.FINANCE, UserRole.SUPER_ADMIN}
+    ADMIN_UI = {
+        UserRole.SUPPORT,
+        UserRole.MODERATOR,
+        UserRole.FINANCE,
+        UserRole.SYSTEM_ADMIN,
+        UserRole.SUPER_ADMIN,
+    }
