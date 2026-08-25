@@ -28,7 +28,10 @@ async function request(path, options = {}) {
 async function loadHealth() {
   try {
     const health = await request("/health");
-    const dataStoreReady = health.supabase_configured || health.database_configured;
+    const dataStoreReady =
+      health.supabase_configured ||
+      health.database_configured ||
+      health.data_store === "local";
     fields.health.textContent = `API ready | Data store ${dataStoreReady ? "on" : "off"}`;
   } catch (error) {
     fields.health.textContent = "API unavailable";
