@@ -120,7 +120,10 @@ class LocalRepository:
 
     async def get_best_cv(self) -> dict[str, Any] | None:
         cvs = list(self._data["cvs"].values())
-        return cvs[0] if cvs else None
+        if not cvs:
+            return None
+        cvs.sort(key=lambda cv: cv.get("created_at") or "", reverse=True)
+        return cvs[0]
 
     async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
         pending = []
@@ -148,7 +151,12 @@ class LocalRepository:
     # ── CVs ─────────────────────────────────────────────────────────
 
     async def list_cvs(self) -> list[CvRecord]:
-        return [CvRecord.model_validate(c) for c in self._data["cvs"].values()]
+        cvs = sorted(
+            self._data["cvs"].values(),
+            key=lambda cv: cv.get("created_at") or "",
+            reverse=True,
+        )
+        return [CvRecord.model_validate(c) for c in cvs]
 
     async def create_cv(self, data: dict[str, Any]) -> CvRecord:
         cid = str(uuid4())
