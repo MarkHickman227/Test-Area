@@ -83,6 +83,23 @@ class FakeRepository:
     async def get_submitted_job_type_counts(self):
         return {}
 
+    async def list_cvs(self):
+        return []
+
+    async def create_cv(self, data):
+        from uuid import uuid4
+
+        from app.models import CvRecord
+
+        self.created_cv = data
+        return CvRecord(
+            id=uuid4(),
+            label=data["label"],
+            file_name=data["file_name"],
+            raw_text=data["raw_text"],
+            parsed_profile=data.get("parsed_profile") or {},
+        )
+
 
 class FakeWriter:
     async def regenerate(self, job, artifact, notes=None):
@@ -181,3 +198,21 @@ def test_preferences_can_be_saved():
 
     assert response.status_code == 200
     assert response.json()["target_titles"] == ["Enterprise Architect"]
+
+
+def test_create_cv_parses_profile():
+    client, repository = make_client()
+
+    response = client.post(
+        "/api/cvs",
+        json={
+            "label": "Current",
+            "file_name": "CV_current.docx",
+            "raw_text": "Enterprise Architect with Azure, AWS, TOGAF and 20 years of contract delivery.",
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert "Azure" in body["parsed_profile"]["skills"]
+    assert repository.created_cv["parsed_profile"]["open_to_contract"] is True

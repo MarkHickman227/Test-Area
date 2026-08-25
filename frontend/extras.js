@@ -63,13 +63,17 @@ async function loadCvs() {
       container.innerHTML = "<p>No CVs uploaded yet. Add one below.</p>";
       return;
     }
-    container.innerHTML = cvs.map((cv) => `
+    container.innerHTML = cvs.map((cv) => {
+      const skillCount = (cv.parsed_profile && cv.parsed_profile.skills && cv.parsed_profile.skills.length) || 0;
+      const skills = skillCount ? ` | ${skillCount} skills parsed` : " | not parsed";
+      return `
       <article class="cv-item card">
         <strong>${escapeHtml(cv.label)}</strong>
-        <span class="meta">${escapeHtml(cv.file_name)} | ${cv.raw_text ? cv.raw_text.length + " chars" : "empty"}</span>
+        <span class="meta">${escapeHtml(cv.file_name)} | ${cv.raw_text ? cv.raw_text.length + " chars" : "empty"}${skills}</span>
         <button class="secondary" onclick="deleteCv('${cv.id}')">Delete</button>
       </article>
-    `).join("");
+    `;
+    }).join("");
   } catch (error) {
     container.innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`;
   }

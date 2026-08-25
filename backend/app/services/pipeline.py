@@ -4,6 +4,7 @@ from typing import Any
 from app.core.config import Settings
 from app.models import Preferences
 from app.services.ai import ApplicationWriter
+from app.services.cv_parser import profile_for_scoring
 from app.services.discovery import DiscoveryService
 from app.services.enrichment import EnrichmentService
 from app.services.repository import SupabaseRepository
@@ -11,6 +12,7 @@ from app.services.repository import SupabaseRepository
 logger = logging.getLogger(__name__)
 
 SCORE_THRESHOLD = 60
+BACKFILL_LIMIT = 15
 
 
 class Pipeline:
@@ -21,22 +23,35 @@ class Pipeline:
         self.writer = ApplicationWriter(settings)
 
     async def run(self, repository: SupabaseRepository, preferences: Preferences) -> dict[str, int]:
-        stats = {"discovered": 0, "enriched": 0, "scored": 0, "generated": 0}
+        stats = {
+            "discovered": 0,
+            "inserted": 0,
+            "processed": 0,
+            "enriched": 0,
+            "scored": 0,
+            "generated": 0,
+            "skipped_no_cv": 0,
+        }
 
         jobs = await self.discovery.search_jobs(preferences)
         stats["discovered"] = len(jobs)
         logger.info("Discovered %d jobs", len(jobs))
 
-        cv = await repository.get_best_cv()
-        cv_profile = cv.get("parsed_profile", {}) if cv else {}
-
         for job_data in jobs:
             inserted = await repository.insert_job(job_data)
-            if not inserted:
-                continue
-            job_id = inserted["id"]
+            if inserted:
+                stats["inserted"] += 1
 
-            await self._enrich_and_score(repository, job_id, inserted, cv_profile, preferences, stats)
+        cv_profile = profile_for_scoring(await repository.get_best_cv())
+        if not cv_profile:
+            logger.warning("No usable CV loaded — scoring and artifact generation will be skipped")
+
+        pending = await repository.list_pending_jobs(BACKFILL_LIMIT)
+        for job in pending:
+            await self._enrich_and_score(
+                repository, str(job["id"]), job, cv_profile, preferences, stats
+            )
+            stats["processed"] += 1
 
         logger.info("Pipeline complete: %s", stats)
         return stats
@@ -46,29 +61,46 @@ class Pipeline:
         repository: SupabaseRepository,
         job_id: str,
         job: dict[str, Any],
-        cv_profile: dict[str, Any],
+        cv_profile: dict[str, Any] | None,
         preferences: Preferences,
         stats: dict[str, int],
     ) -> None:
-        requirements = await self.enrichment.extract_requirements(job)
-        if requirements:
-            await repository.update_job_fields(job_id, {"parsed_requirements": requirements})
-            job["parsed_requirements"] = requirements
-            stats["enriched"] += 1
+        requirements = job.get("parsed_requirements") or {}
+        if not requirements:
+            requirements = await self.enrichment.extract_requirements(job)
+            if requirements:
+                await repository.update_job_fields(job_id, {"parsed_requirements": requirements})
+                job["parsed_requirements"] = requirements
+                stats["enriched"] += 1
 
-        score_result = await self.enrichment.score_job(
-            job, cv_profile, preferences.model_dump(mode="json")
-        )
+        if not cv_profile:
+            stats["skipped_no_cv"] += 1
+            return
+
+        prefs = preferences.model_dump(mode="json")
+        if job.get("job_type") == "CONTRACT" and prefs.get("salary_min"):
+            prefs["contract_day_rate_min"] = max(1, round(int(prefs["salary_min"]) / 220))
+            prefs["salary_note"] = (
+                "salary_min is annual. For CONTRACT roles, treat day rate x 220 "
+                "working days as the equivalent. Do not penalise day-rate contracts."
+            )
+
+        score_result = await self.enrichment.score_job(job, cv_profile, prefs)
         score = score_result.get("score")
-        if score is not None:
-            await repository.update_job_fields(job_id, {
+        if score is None:
+            return
+
+        await repository.update_job_fields(
+            job_id,
+            {
                 "score": score,
                 "score_explanation": score_result.get("score_explanation", ""),
-            })
-            job.update(score_result)
-            stats["scored"] += 1
+            },
+        )
+        job.update(score_result)
+        stats["scored"] += 1
 
-        if score is not None and score >= SCORE_THRESHOLD:
+        if score >= SCORE_THRESHOLD:
             await self._generate_artifacts(repository, job_id, job, stats)
 
     async def _generate_artifacts(

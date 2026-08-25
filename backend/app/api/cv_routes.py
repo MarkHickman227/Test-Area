@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.deps import get_repository
 from app.models import CvCreateRequest, CvRecord
+from app.services.cv_parser import parse_cv_profile
 
 router = APIRouter(prefix="/api")
 
@@ -18,7 +19,9 @@ async def list_cvs(repository: Repo) -> list[CvRecord]:
 
 @router.post("/cvs", response_model=CvRecord, status_code=status.HTTP_201_CREATED)
 async def create_cv(request: CvCreateRequest, repository: Repo) -> CvRecord:
-    return await repository.create_cv(request.model_dump(mode="json"))
+    payload = request.model_dump(mode="json")
+    payload["parsed_profile"] = parse_cv_profile(payload["raw_text"])
+    return await repository.create_cv(payload)
 
 
 @router.delete("/cvs/{cv_id}", status_code=status.HTTP_204_NO_CONTENT)

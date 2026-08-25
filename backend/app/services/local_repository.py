@@ -122,6 +122,18 @@ class LocalRepository:
         cvs = list(self._data["cvs"].values())
         return cvs[0] if cvs else None
 
+    async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
+        pending = []
+        for job in self._data["jobs"].values():
+            if job.get("status") != "NEW":
+                continue
+            score = job.get("score")
+            if score is not None and score >= 60:
+                continue
+            pending.append(job)
+        pending.sort(key=lambda job: job.get("created_at") or "", reverse=True)
+        return pending[:limit]
+
     # ── preferences ─────────────────────────────────────────────────
 
     async def get_preferences(self) -> Preferences | None:

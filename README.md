@@ -27,7 +27,8 @@ docker compose up --build -d
 ```
 
 5. Open `http://localhost:8765` and complete onboarding.
-6. Save preferences in the dashboard so twice-daily discovery can run.
+6. Upload a CV on the **CVs** tab. Scoring and cover letters stay skipped until a CV is loaded.
+7. Save preferences in the dashboard so twice-daily discovery can run.
 
 ## Twice-daily scheduling
 

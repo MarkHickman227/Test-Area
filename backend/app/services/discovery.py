@@ -12,17 +12,23 @@ from app.services.agency import detect_agency
 
 logger = logging.getLogger(__name__)
 
-_JOB_TYPE_PATTERNS = {
-    "CONTRACT": re.compile(
-        r"\b(?:contract|freelance|ftc|fixed[\s-]?term|interim|c2c|"
-        r"outside\s+ir35|temporary|temp(?:\s*|-)?to(?:\s*|-)?perm|"
-        r"project\s+basis|\d+\s*month(?:s)?\s+(?:ftc|contract|fixed))\b",
-        re.IGNORECASE,
-    ),
-    "PERM": re.compile(
-        r"\b(?:permanent|perm(?!\w)|full[\s-]?time|salaried)\b", re.IGNORECASE
-    ),
-}
+_STRONG_CONTRACT = re.compile(
+    r"\b(?:freelance|ftc|fixed[\s-]?term|interim|c2c|"
+    r"outside\s+ir35|inside\s+ir35|temporary|temp(?:\s*|-)?to(?:\s*|-)?perm|"
+    r"project\s+basis|\d+\s*month(?:s)?\s+(?:ftc|contract|fixed)|"
+    r"day\s*rate|per\s*day|p/?d)\b",
+    re.IGNORECASE,
+)
+_GENERIC_CONTRACT = re.compile(r"\bcontract\b", re.IGNORECASE)
+_STRONG_PERM = re.compile(r"\b(?:permanent|perm(?!\w)|salaried)\b", re.IGNORECASE)
+_FULL_TIME = re.compile(r"\bfull[\s-]?time\b", re.IGNORECASE)
+_DAY_RATE = re.compile(
+    r"(?:£|gbp)?\s*(\d{2,4}(?:,\d{3})?)\s*(?:-|to|–)\s*(?:£|gbp)?\s*"
+    r"(\d{2,4}(?:,\d{3})?)?\s*(?:per\s*day|/day|p/?d|a\s*day|day\s*rate)"
+    r"|(?:£|gbp)?\s*(\d{2,4}(?:,\d{3})?)\s*(?:per\s*day|/day|p/?d|a\s*day|day\s*rate)",
+    re.IGNORECASE,
+)
+WORKING_DAYS = 220
 
 SEARCH_PROMPT_TEMPLATE = (
     "Search for recent job postings matching these criteria. "
@@ -56,7 +62,12 @@ class DiscoveryService:
     def _build_prompt(self, prefs: Preferences) -> str:
         salary_line = ""
         if prefs.salary_min:
-            salary_line = f"- Minimum salary: £{prefs.salary_min:,}\n"
+            day_rate = max(1, round(prefs.salary_min / WORKING_DAYS))
+            salary_line = (
+                f"- Minimum salary: £{prefs.salary_min:,} permanent, or about "
+                f"£{day_rate:,}+ per day for CONTRACT / FTC / IR35 roles. "
+                "Include day-rate contracts that meet that equivalent.\n"
+            )
         return SEARCH_PROMPT_TEMPLATE.format(
             titles=", ".join(prefs.target_titles),
             locations=", ".join(prefs.locations),
@@ -131,9 +142,8 @@ class DiscoveryService:
         description: str | None = "",
         title: str | None = "",
     ) -> str | None:
-        """Infer PERM vs CONTRACT from title/description; title signals beat a weak LLM PERM label."""
+        """Infer PERM vs CONTRACT. Full-time does not override a contract role."""
         title_text = title or ""
-        # Avoid false positives like "Contract type: Permanent".
         cleaned_description = re.sub(
             r"contract\s*type\s*:\s*permanent",
             "permanent",
@@ -142,12 +152,12 @@ class DiscoveryService:
         )
         haystack = f"{title_text}\n{cleaned_description}"
 
-        # Title contract cues beat a generic PERM label from the model.
-        if _JOB_TYPE_PATTERNS["CONTRACT"].search(title_text):
+        if _STRONG_CONTRACT.search(title_text) or _GENERIC_CONTRACT.search(title_text):
             return "CONTRACT"
-        if _JOB_TYPE_PATTERNS["CONTRACT"].search(cleaned_description):
-            # Description says permanent elsewhere → prefer PERM.
-            if _JOB_TYPE_PATTERNS["PERM"].search(cleaned_description):
+        if _STRONG_CONTRACT.search(cleaned_description):
+            return "CONTRACT"
+        if _GENERIC_CONTRACT.search(cleaned_description):
+            if _STRONG_PERM.search(cleaned_description):
                 return "PERM"
             return "CONTRACT"
 
@@ -157,7 +167,7 @@ class DiscoveryService:
         if normalized in ("PERM", "PERMANENT"):
             return "PERM"
 
-        if _JOB_TYPE_PATTERNS["PERM"].search(haystack):
+        if _STRONG_PERM.search(haystack) or _FULL_TIME.search(haystack):
             return "PERM"
         return None
 
@@ -165,7 +175,19 @@ class DiscoveryService:
     def _parse_salary(text: str | None) -> dict[str, int | None]:
         if not text:
             return {"salary_min": None, "salary_max": None}
-        # Require at least one digit so lone commas from LLM text do not crash.
+        day_match = _DAY_RATE.search(text)
+        if day_match:
+            day_rates = [
+                int(value.replace(",", ""))
+                for value in day_match.groups()
+                if value
+            ]
+            day_rates = [rate for rate in day_rates if 150 <= rate <= 2500]
+            if day_rates:
+                annual = [rate * WORKING_DAYS for rate in day_rates]
+                if len(annual) >= 2:
+                    return {"salary_min": min(annual), "salary_max": max(annual)}
+                return {"salary_min": annual[0], "salary_max": None}
         numbers = [
             int(n.replace(",", ""))
             for n in re.findall(r"\d[\d,]*", text)

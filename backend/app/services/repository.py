@@ -156,9 +156,23 @@ class SupabaseRepository:
         rows = await self._request(
             "GET",
             "cvs",
-            params={"select": "id,label,parsed_profile", "order": "created_at.desc", "limit": "1"},
+            params={"select": "id,label,parsed_profile,raw_text", "order": "created_at.desc", "limit": "1"},
         )
         return rows[0] if rows else None
+
+    async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
+        rows = await self._request(
+            "GET",
+            "jobs",
+            params={
+                "select": "*",
+                "status": "eq.NEW",
+                "or": "(score.is.null,score.lt.60)",
+                "order": "created_at.desc",
+                "limit": str(limit),
+            },
+        )
+        return list(rows or [])
 
     async def list_cvs(self) -> list[CvRecord]:
         rows = await self._request(
