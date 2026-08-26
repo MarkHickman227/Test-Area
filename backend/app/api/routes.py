@@ -21,6 +21,7 @@ from app.services.scheduler import DiscoveryScheduler
 router = APIRouter(prefix="/api")
 
 Repo = Annotated[Any, Depends(get_repository)]
+REPAIR_VERSION = "cv-backfill-1"
 
 
 def get_writer() -> ApplicationWriter:
@@ -85,6 +86,7 @@ async def health(
             and db_configured
             and settings.anthropic_configured
         ),
+        "repair_version": REPAIR_VERSION,
     }
     if scheduler is not None:
         payload["scheduler"] = scheduler.status()

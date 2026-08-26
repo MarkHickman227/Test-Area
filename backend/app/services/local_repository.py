@@ -165,6 +165,14 @@ class LocalRepository:
         self._save()
         return CvRecord.model_validate(row)
 
+    async def update_cv_profile(self, cv_id: UUID, parsed_profile: dict[str, Any]) -> CvRecord:
+        row = self._data["cvs"].get(str(cv_id))
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CV not found")
+        row["parsed_profile"] = parsed_profile or {}
+        self._save()
+        return CvRecord.model_validate(row)
+
     async def delete_cv(self, cv_id: UUID) -> None:
         self._data["cvs"].pop(str(cv_id), None)
         self._save()

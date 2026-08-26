@@ -30,6 +30,7 @@ class FakeRepository:
             cover_letter="Original cover letter",
         )
         self.preferences = None
+        self.cvs: list = []
 
     async def list_jobs(self, status_filter=None, job_type=None, min_score=None, max_score=None):
         return [
@@ -84,7 +85,7 @@ class FakeRepository:
         return {}
 
     async def list_cvs(self):
-        return []
+        return self.cvs
 
     async def create_cv(self, data):
         from uuid import uuid4
@@ -92,13 +93,22 @@ class FakeRepository:
         from app.models import CvRecord
 
         self.created_cv = data
-        return CvRecord(
+        record = CvRecord(
             id=uuid4(),
             label=data["label"],
             file_name=data["file_name"],
             raw_text=data["raw_text"],
             parsed_profile=data.get("parsed_profile") or {},
         )
+        self.cvs.append(record)
+        return record
+
+    async def update_cv_profile(self, cv_id, parsed_profile):
+        for cv in self.cvs:
+            if cv.id == cv_id:
+                cv.parsed_profile = parsed_profile or {}
+                return cv
+        raise AssertionError("CV not found")
 
 
 class FakeWriter:
@@ -129,6 +139,7 @@ def test_health_reports_configuration_state():
     assert "supabase_configured" in body
     assert body["discovery_schedule_mode"] == "twice_daily"
     assert body["discovery_times"] == ["08:00", "20:00"]
+    assert body["repair_version"] == "cv-backfill-1"
 
 
 def test_pipeline_run_skips_without_credentials():
@@ -216,3 +227,23 @@ def test_create_cv_parses_profile():
     body = response.json()
     assert "Azure" in body["parsed_profile"]["skills"]
     assert repository.created_cv["parsed_profile"]["open_to_contract"] is True
+
+
+def test_reparse_cvs_rebuilds_profile():
+    client, repository = make_client()
+    created = client.post(
+        "/api/cvs",
+        json={
+            "label": "Current",
+            "file_name": "CV_current.docx",
+            "raw_text": "Enterprise Architect with Azure and TOGAF.",
+        },
+    )
+    assert created.status_code == 201
+    repository.cvs[0].parsed_profile = {}
+
+    response = client.post("/api/cvs/reparse")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "Azure" in body[0]["parsed_profile"]["skills"]

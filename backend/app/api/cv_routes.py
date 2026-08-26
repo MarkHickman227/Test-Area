@@ -24,6 +24,15 @@ async def create_cv(request: CvCreateRequest, repository: Repo) -> CvRecord:
     return await repository.create_cv(payload)
 
 
+@router.post("/cvs/reparse", response_model=list[CvRecord])
+async def reparse_cvs(repository: Repo) -> list[CvRecord]:
+    updated: list[CvRecord] = []
+    for cv in await repository.list_cvs():
+        profile = parse_cv_profile(cv.raw_text)
+        updated.append(await repository.update_cv_profile(cv.id, profile))
+    return updated
+
+
 @router.delete("/cvs/{cv_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_cv(cv_id: UUID, repository: Repo) -> None:
     await repository.delete_cv(cv_id)

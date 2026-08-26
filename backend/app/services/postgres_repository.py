@@ -253,6 +253,22 @@ class PostgresRepository:
         )
         return CvRecord.model_validate(rows[0])
 
+    async def update_cv_profile(self, cv_id: UUID, parsed_profile: dict[str, Any]):
+        from app.models import CvRecord
+
+        rows = await self._fetch_all(
+            """
+            update cvs
+            set parsed_profile = %s
+            where id = %s
+            returning *
+            """,
+            [Jsonb(parsed_profile or {}), cv_id],
+        )
+        if not rows:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CV not found")
+        return CvRecord.model_validate(rows[0])
+
     async def delete_cv(self, cv_id: UUID) -> None:
         await self._execute("delete from cvs where id = %s", [cv_id])
 
