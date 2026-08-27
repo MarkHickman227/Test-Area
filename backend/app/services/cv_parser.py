@@ -41,7 +41,23 @@ _SKILL_TERMS = (
 _ROLE_RE = re.compile(
     r"(?im)^\s*(enterprise architect|solutions architect|solution architect|"
     r"cto|chief technology officer|lead architect|principal architect|"
+    r"technology director|it director|architecture director|"
     r"ai & automation consultant|business mentor).*$"
+)
+
+_CONTRACT_YEARS_RE = re.compile(
+    r"(?i)\b(?:over|more than)?\s*(\d{1,2})\+?\s+years?\s+(?:of\s+)?"
+    r"(?:[a-z-]+\s+){0,3}(?:contract|contracting|freelance)\b"
+)
+
+_EXPERIENCE_YEARS_RE = re.compile(
+    r"(?i)\b(?:over|more than)?\s*(\d{1,2})\+?\s+years?\s+(?:of\s+)?"
+    r"(?:professional\s+)?experience\b"
+)
+
+_OPEN_TO_CONTRACT_RE = re.compile(
+    r"(?i)\b(?:open to|seeking|looking for|available for)\s+"
+    r"(?:new\s+)?(?:contract|contracting|freelance)(?:\s+(?:roles?|work|opportunities))?\b"
 )
 
 
@@ -53,22 +69,31 @@ def parse_cv_profile(raw_text: str) -> dict[str, Any]:
     lowered = text.lower()
     skills = [term for term in _SKILL_TERMS if term.lower() in lowered]
     roles = [match.group(0).strip() for match in _ROLE_RE.finditer(text)]
-    contract_years = 20 if "20 years of contract" in lowered else None
-    if contract_years is None and re.search(r"\bcontract\b", lowered):
-        contract_years = 10
-
     summary = _profile_section(text) or text[:4000]
-    return {
+    profile: dict[str, Any] = {
         "summary": summary[:4000],
         "raw_text": text[:12000],
         "skills": skills,
         "roles": roles[:12],
         "domains": _domains(lowered),
-        "seniority": "director",
-        "experience_years": 20 if "20 years" in lowered else None,
-        "contract_delivery_years": contract_years,
-        "open_to_contract": True,
     }
+
+    seniority = _seniority(roles)
+    if seniority:
+        profile["seniority"] = seniority
+
+    experience_match = _EXPERIENCE_YEARS_RE.search(text)
+    if experience_match:
+        profile["experience_years"] = int(experience_match.group(1))
+
+    contract_match = _CONTRACT_YEARS_RE.search(text)
+    if contract_match:
+        profile["contract_delivery_years"] = int(contract_match.group(1))
+
+    if _OPEN_TO_CONTRACT_RE.search(text):
+        profile["open_to_contract"] = True
+
+    return profile
 
 
 def profile_for_scoring(cv: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -106,3 +131,14 @@ def _domains(lowered: str) -> list[str]:
     }
     found = [label for label, needles in mapping.items() if any(n in lowered for n in needles)]
     return found
+
+
+def _seniority(roles: list[str]) -> str | None:
+    role_text = " ".join(roles).lower()
+    if re.search(r"\b(?:cto|chief technology officer)\b", role_text):
+        return "executive"
+    if re.search(r"\b(?:technology|it|architecture) director\b", role_text):
+        return "director"
+    if re.search(r"\b(?:lead|principal) architect\b", role_text):
+        return "lead"
+    return None

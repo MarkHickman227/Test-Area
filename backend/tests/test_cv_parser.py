@@ -17,8 +17,8 @@ def test_parse_cv_profile_extracts_skills_and_contract_history():
     assert "Azure" in profile["skills"]
     assert "AWS" in profile["skills"]
     assert "TOGAF" in profile["skills"]
-    assert profile["open_to_contract"] is True
     assert profile["contract_delivery_years"] == 20
+    assert "open_to_contract" not in profile
     assert "higher education" in profile["domains"]
     assert profile["raw_text"].startswith("Mark Hickman")
 
@@ -26,6 +26,21 @@ def test_parse_cv_profile_extracts_skills_and_contract_history():
 def test_parse_cv_profile_empty():
     assert parse_cv_profile("") == {}
     assert parse_cv_profile("   ") == {}
+
+
+def test_parse_cv_profile_does_not_fabricate_candidate_attributes():
+    profile = parse_cv_profile("Junior developer with Python experience. Permanent roles only.")
+
+    assert "seniority" not in profile
+    assert "experience_years" not in profile
+    assert "contract_delivery_years" not in profile
+    assert "open_to_contract" not in profile
+
+
+def test_parse_cv_profile_keeps_explicit_contract_preference():
+    profile = parse_cv_profile("Solution Architect. Open to contract roles.")
+
+    assert profile["open_to_contract"] is True
 
 
 def test_profile_for_scoring_uses_raw_text_when_parsed_profile_empty():

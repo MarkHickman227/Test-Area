@@ -221,7 +221,7 @@ class PostgresRepository:
             select *
             from jobs
             where status = 'NEW'
-              and (score is null or score < 60)
+              and score is null
             order by created_at desc
             limit %s
             """,

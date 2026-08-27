@@ -130,8 +130,7 @@ class LocalRepository:
         for job in self._data["jobs"].values():
             if job.get("status") != "NEW":
                 continue
-            score = job.get("score")
-            if score is not None and score >= 60:
+            if job.get("score") is not None:
                 continue
             pending.append(job)
         pending.sort(key=lambda job: job.get("created_at") or "", reverse=True)

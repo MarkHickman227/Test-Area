@@ -226,7 +226,8 @@ def test_create_cv_parses_profile():
     assert response.status_code == 201
     body = response.json()
     assert "Azure" in body["parsed_profile"]["skills"]
-    assert repository.created_cv["parsed_profile"]["open_to_contract"] is True
+    assert repository.created_cv["parsed_profile"]["contract_delivery_years"] == 20
+    assert "open_to_contract" not in repository.created_cv["parsed_profile"]
 
 
 def test_reparse_cvs_rebuilds_profile():

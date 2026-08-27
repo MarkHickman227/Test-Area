@@ -38,8 +38,7 @@ class FakePipelineRepository:
         for job in self.jobs.values():
             if job.get("status") != "NEW":
                 continue
-            score = job.get("score")
-            if score is not None and score >= 60:
+            if job.get("score") is not None:
                 continue
             pending.append(job)
         return pending[:limit]
@@ -177,3 +176,24 @@ async def test_pipeline_backfills_existing_new_jobs():
     assert stats["scored"] == 1
     assert stats["generated"] == 1
     assert repo.updated_fields[JOB_ID]["score"] == 85
+
+
+@pytest.mark.asyncio
+async def test_pipeline_does_not_rescore_existing_low_score():
+    existing = {
+        "id": JOB_ID,
+        "title": "Unrelated role",
+        "job_type": "PERM",
+        "status": "NEW",
+        "score": 30,
+        "source_url": "https://example.com/already-scored",
+    }
+    pipeline = _pipeline(discovery=FakeDiscoveryService(jobs=[]))
+    repo = FakePipelineRepository(existing_jobs=[existing])
+    prefs = Preferences(target_titles=["EA"], locations=["London"])
+
+    stats = await pipeline.run(repo, prefs)
+
+    assert stats["processed"] == 0
+    assert stats["scored"] == 0
+    assert repo.updated_fields == {}
