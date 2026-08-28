@@ -43,6 +43,8 @@ async function loadAnalytics() {
         <div class="stat-card"><span class="stat-number">${data.submitted}</span><span class="stat-label">Submitted</span></div>
         <div class="stat-card"><span class="stat-number">${data.interviews}</span><span class="stat-label">Interviews</span></div>
         <div class="stat-card"><span class="stat-number">${data.offers}</span><span class="stat-label">Offers</span></div>
+        <div class="stat-card"><span class="stat-number">${data.score_ge_60 ?? 0}</span><span class="stat-label">Score 60+</span></div>
+        <div class="stat-card"><span class="stat-number">${data.draft_ready ?? 0}</span><span class="stat-label">Draft / Ready</span></div>
       </div>
       <h3>Job type mix (all jobs)</h3>
       <table class="analytics-table"><thead><tr><th>Type</th><th>Count</th></tr></thead><tbody>${typeRows}</tbody></table>
@@ -63,13 +65,25 @@ async function loadCvs() {
       container.innerHTML = "<p>No CVs uploaded yet. Add one below.</p>";
       return;
     }
-    container.innerHTML = cvs.map((cv) => `
+    container.innerHTML = cvs.map((cv) => {
+      const profile = cv.parsed_profile || {};
+      const skillList = profile.skills || [];
+      const parsed = skillList.length
+        ? `${skillList.length} skills parsed`
+        : "not parsed";
+      const roles = (profile.roles || []).slice(0, 6).join(", ");
+      const skills = skillList.slice(0, 12).join(", ");
+      const domains = (profile.domains || []).slice(0, 6).join(", ");
+      return `
       <article class="cv-item card">
         <strong>${escapeHtml(cv.label)}</strong>
-        <span class="meta">${escapeHtml(cv.file_name)} | ${cv.raw_text ? cv.raw_text.length + " chars" : "empty"}</span>
+        <span class="meta">${escapeHtml(cv.file_name)} | ${cv.raw_text ? cv.raw_text.length + " chars" : "empty"} | ${parsed}</span>
         <button class="secondary" onclick="deleteCv('${cv.id}')">Delete</button>
+        <p class="cv-parsed">${escapeHtml(roles || "No roles parsed")}${domains ? " | " + escapeHtml(domains) : ""}</p>
+        <p class="cv-parsed">${escapeHtml(skills || "No skills parsed")}</p>
       </article>
-    `).join("");
+    `;
+    }).join("");
   } catch (error) {
     container.innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`;
   }
@@ -79,6 +93,17 @@ async function deleteCv(id) {
   await fetch(`${apiBase}/cvs/${id}`, { method: "DELETE" });
   loadCvs();
 }
+
+async function reparseCvs() {
+  try {
+    await request("/cvs/reparse", { method: "POST" });
+    loadCvs();
+  } catch (error) {
+    alert(`Failed to reparse CVs: ${error.message}`);
+  }
+}
+
+document.getElementById("cv-reparse").addEventListener("click", reparseCvs);
 
 document.getElementById("cv-upload").addEventListener("click", async () => {
   const label = document.getElementById("cv-label").value.trim();

@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.cv_routes import router as cv_router
@@ -16,6 +16,7 @@ from app.services.scheduler import DiscoveryScheduler
 def _find_frontend_dir() -> Path | None:
     candidates = [
         Path(__file__).resolve().parents[2] / "frontend",
+        Path(__file__).resolve().parents[1].parent / "frontend",
         Path.cwd() / "frontend",
         Path.cwd().parent / "frontend",
     ]
@@ -56,14 +57,18 @@ def create_app() -> FastAPI:
 
 
 def _mount_frontend(app: FastAPI) -> None:
-    if _FRONTEND_DIR is None:
+    if _FRONTEND_DIR is not None:
+        @app.get("/", include_in_schema=False)
+        async def serve_index():
+            return FileResponse(_FRONTEND_DIR / "index.html")
+
+        app.mount("/", StaticFiles(directory=_FRONTEND_DIR), name="frontend")
         return
 
     @app.get("/", include_in_schema=False)
-    async def serve_index():
-        return FileResponse(_FRONTEND_DIR / "index.html")
-
-    app.mount("/", StaticFiles(directory=_FRONTEND_DIR), name="frontend")
+    async def redirect_to_gui(request: Request):
+        host = (request.headers.get("host") or "127.0.0.1").split(":")[0]
+        return RedirectResponse(url=f"http://{host}:8765/", status_code=302)
 
 
 app = create_app()

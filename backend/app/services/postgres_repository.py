@@ -210,10 +210,24 @@ class PostgresRepository:
 
     async def get_best_cv(self) -> dict[str, Any] | None:
         rows = await self._fetch_all(
-            "select id, label, parsed_profile from cvs order by created_at desc limit 1",
+            "select id, label, parsed_profile, raw_text from cvs order by created_at desc limit 1",
             [],
         )
         return dict(rows[0]) if rows else None
+
+    async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
+        rows = await self._fetch_all(
+            """
+            select *
+            from jobs
+            where status = 'NEW'
+              and (score is null or score < 60)
+            order by created_at desc
+            limit %s
+            """,
+            [limit],
+        )
+        return [dict(row) for row in rows]
 
     async def list_cvs(self):
         from app.models import CvRecord
@@ -237,6 +251,22 @@ class PostgresRepository:
                 Jsonb(data.get("parsed_profile") or {}),
             ],
         )
+        return CvRecord.model_validate(rows[0])
+
+    async def update_cv_profile(self, cv_id: UUID, parsed_profile: dict[str, Any]):
+        from app.models import CvRecord
+
+        rows = await self._fetch_all(
+            """
+            update cvs
+            set parsed_profile = %s
+            where id = %s
+            returning *
+            """,
+            [Jsonb(parsed_profile or {}), cv_id],
+        )
+        if not rows:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CV not found")
         return CvRecord.model_validate(rows[0])
 
     async def delete_cv(self, cv_id: UUID) -> None:

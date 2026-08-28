@@ -120,7 +120,22 @@ class LocalRepository:
 
     async def get_best_cv(self) -> dict[str, Any] | None:
         cvs = list(self._data["cvs"].values())
-        return cvs[0] if cvs else None
+        if not cvs:
+            return None
+        cvs.sort(key=lambda cv: cv.get("created_at") or "", reverse=True)
+        return cvs[0]
+
+    async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
+        pending = []
+        for job in self._data["jobs"].values():
+            if job.get("status") != "NEW":
+                continue
+            score = job.get("score")
+            if score is not None and int(score) >= 60:
+                continue
+            pending.append(job)
+        pending.sort(key=lambda job: job.get("created_at") or "", reverse=True)
+        return pending[:limit]
 
     # ── preferences ─────────────────────────────────────────────────
 
@@ -136,12 +151,25 @@ class LocalRepository:
     # ── CVs ─────────────────────────────────────────────────────────
 
     async def list_cvs(self) -> list[CvRecord]:
-        return [CvRecord.model_validate(c) for c in self._data["cvs"].values()]
+        cvs = sorted(
+            self._data["cvs"].values(),
+            key=lambda cv: cv.get("created_at") or "",
+            reverse=True,
+        )
+        return [CvRecord.model_validate(c) for c in cvs]
 
     async def create_cv(self, data: dict[str, Any]) -> CvRecord:
         cid = str(uuid4())
         row = {**data, "id": cid, "created_at": _now_str()}
         self._data["cvs"][cid] = row
+        self._save()
+        return CvRecord.model_validate(row)
+
+    async def update_cv_profile(self, cv_id: UUID, parsed_profile: dict[str, Any]) -> CvRecord:
+        row = self._data["cvs"].get(str(cv_id))
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CV not found")
+        row["parsed_profile"] = parsed_profile or {}
         self._save()
         return CvRecord.model_validate(row)
 

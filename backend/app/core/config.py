@@ -56,6 +56,12 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="PIPELINE_TRIGGER_TOKEN",
     )
+    auto_apply: bool = Field(default=True, validation_alias="AUTO_APPLY")
+    smtp_host: str | None = Field(default=None, validation_alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, validation_alias="SMTP_PORT")
+    smtp_user: str | None = Field(default=None, validation_alias="SMTP_USER")
+    smtp_password: str | None = Field(default=None, validation_alias="SMTP_PASSWORD")
+    apply_from_email: str | None = Field(default=None, validation_alias="APPLY_FROM_EMAIL")
 
     model_config = SettingsConfigDict(
         env_file="config/.env",
@@ -96,6 +102,12 @@ class Settings(BaseSettings):
         from app.services.schedule import parse_discovery_times
 
         return parse_discovery_times(self.discovery_times)
+
+    @property
+    def smtp_configured(self) -> bool:
+        return self._has_real_secret(self.smtp_host) and self._has_real_secret(
+            self.apply_from_email
+        )
 
     @property
     def trigger_token_configured(self) -> bool:

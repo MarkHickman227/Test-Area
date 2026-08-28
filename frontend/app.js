@@ -5,6 +5,7 @@ let notice = "";
 let allJobs = [];
 let activeStatus = "";
 let activeType = "";
+let activeMinScore = "";
 
 const fields = {
   health: document.querySelector("#health"),
@@ -28,7 +29,10 @@ async function request(path, options = {}) {
 async function loadHealth() {
   try {
     const health = await request("/health");
-    const dataStoreReady = health.supabase_configured || health.database_configured;
+    const dataStoreReady =
+      health.supabase_configured ||
+      health.database_configured ||
+      health.data_store === "local";
     fields.health.textContent = `API ready | Data store ${dataStoreReady ? "on" : "off"}`;
   } catch (error) {
     fields.health.textContent = "API unavailable";
@@ -47,6 +51,8 @@ function updateMetricTiles(jobs) {
   set("count-perm", submitted.filter((job) => job.job_type === "PERM").length);
   set("count-contract", submitted.filter((job) => job.job_type === "CONTRACT").length);
   set("count-new", jobs.filter((job) => job.status === "NEW").length);
+  set("count-draft", jobs.filter((job) => job.status === "DRAFT" || job.status === "READY").length);
+  set("count-score60", jobs.filter((job) => (job.score ?? 0) >= 60).length);
   set("count-interview", jobs.filter((job) => job.status === "INTERVIEW").length);
   set("count-offer", jobs.filter((job) => job.status === "OFFER").length);
   set("count-rejected", jobs.filter((job) => job.status === "REJECTED").length);
@@ -56,6 +62,7 @@ function filterLabel() {
   const parts = [];
   if (activeStatus) parts.push(activeStatus);
   if (activeType) parts.push(activeType);
+  if (activeMinScore) parts.push(`score ${activeMinScore}+`);
   return parts.length ? parts.join(" · ") : "All";
 }
 
@@ -63,6 +70,7 @@ function filteredJobs() {
   return allJobs.filter((job) => {
     if (activeStatus && job.status !== activeStatus) return false;
     if (activeType && job.job_type !== activeType) return false;
+    if (activeMinScore && (job.score ?? 0) < Number(activeMinScore)) return false;
     return true;
   });
 }
@@ -242,6 +250,7 @@ document.querySelectorAll(".metric-tile").forEach((tile) => {
   tile.addEventListener("click", () => {
     activeStatus = tile.dataset.filterStatus || "";
     activeType = tile.dataset.filterType || "";
+    activeMinScore = tile.dataset.filterMinScore || "";
     document.querySelectorAll(".metric-tile").forEach((node) => {
       node.classList.toggle("active", node === tile);
     });

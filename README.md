@@ -1,13 +1,13 @@
 # ApplyPilot
 
-ApplyPilot is an AI-assisted job application review workspace. It searches for jobs, stores the enriched opportunities in Supabase, scores each job against your CV, and prepares application artifacts for human review.
+ApplyPilot is an AI job application agent. It searches for jobs, scores each listing against your **full uploaded CV**, writes the application pack, and **applies automatically** for roles that score 60+.
 
-ApplyPilot never submits applications automatically. The dashboard is the final review step before you copy, edit, and submit anything yourself.
+When a listing includes a contact email and SMTP is configured, ApplyPilot emails the cover letter and CV. Otherwise it stores the completed application as Submitted against that listing URL. It does not invent CV experience.
 
 ## What is included
 
-- FastAPI backend with health checks, job review endpoints, status transitions, and AI generation hooks.
-- Static frontend dashboard for filtering jobs, reviewing generated artifacts, and updating pipeline status.
+- FastAPI backend with health checks, job pipeline, auto-apply, and status tracking.
+- Static frontend dashboard for filtering jobs and viewing sent applications.
 - Twice-daily discovery scheduler with run locking and retries.
 - Supabase SQL schema and helper functions.
 - Docker Compose setup for VPS and local runs.
@@ -27,7 +27,8 @@ docker compose up --build -d
 ```
 
 5. Open `http://localhost:8765` and complete onboarding.
-6. Save preferences in the dashboard so twice-daily discovery can run.
+6. Upload a CV on the **CVs** tab. Scoring and cover letters stay skipped until a CV is loaded.
+7. Save preferences in the dashboard so twice-daily discovery can run.
 
 ## Twice-daily scheduling
 

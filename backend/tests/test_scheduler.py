@@ -65,6 +65,39 @@ async def test_run_once_rejects_concurrent_calls(monkeypatch):
     assert primary["stats"]["discovered"] == 1
 
 
+@pytest.mark.asyncio
+async def test_run_backfill_skips_without_anthropic():
+    scheduler = DiscoveryScheduler(_settings())
+    result = await scheduler.run_backfill(trigger="test")
+    assert result["status"] == "skipped"
+    assert "ANTHROPIC" in result["reason"] or "database" in result["reason"].lower() or "Supabase" in result["reason"]
+
+
+@pytest.mark.asyncio
+async def test_run_backfill_does_not_require_perplexity(monkeypatch):
+    settings = _settings(
+        PERPLEXITY_API_KEY="replace-with-perplexity-api-key",
+        SUPABASE_URL="https://newproject.supabase.co",
+        SUPABASE_SERVICE_KEY=(
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+            "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ld3Byb2plY3QiLCJyb2xlIjoic2VydmljZV9yb2xlIn0."
+            "signature"
+        ),
+        ANTHROPIC_API_KEY="anthropic-test-key",
+    )
+    scheduler = DiscoveryScheduler(settings)
+
+    async def fake_backfill(*, limit):
+        return {"discovered": 0, "processed": 3, "scored": 3, "generated": 1}
+
+    monkeypatch.setattr(scheduler, "_run_backfill", fake_backfill)
+    result = await scheduler.run_backfill(trigger="api", limit=10)
+
+    assert result["status"] == "ok"
+    assert result["stats"]["scored"] == 3
+    assert result["stats"]["discovered"] == 0
+
+
 def test_scheduler_status_shape():
     scheduler = DiscoveryScheduler(_settings())
     status = scheduler.status()

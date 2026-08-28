@@ -15,5 +15,5 @@ Follow `AGENTS.md` → **Twice-daily automation runbook** exactly.
 7. Treat `status=ok` as success.
 8. Treat `status=skipped` as a controlled no-op and report the reason.
 9. Treat HTTP 409 as "already running" — do not retry repeatedly.
-10. Never submit applications. Never invent credentials. Never open a PR unless you had to fix a blocking bug.
+10. Auto-apply jobs that score 60+ against the full uploaded CV. Never invent credentials. Never open a PR unless you had to fix a blocking bug.
 11. End with a short status summary: trigger time, result status, stats or skip reason.

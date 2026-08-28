@@ -1,3 +1,4 @@
+from app.models import Preferences
 from app.services.discovery import DiscoveryService
 
 
@@ -99,3 +100,32 @@ def test_parse_salary():
     assert DiscoveryService._parse_salary(None) == {"salary_min": None, "salary_max": None}
     assert DiscoveryService._parse_salary("£90,000 - , DOE") == {"salary_min": 90000, "salary_max": None}
     assert DiscoveryService._parse_salary(",") == {"salary_min": None, "salary_max": None}
+
+
+def test_infer_full_time_contract_stays_contract():
+    assert (
+        DiscoveryService._infer_job_type(
+            "PERM",
+            "Full-time 6 month contract for a Solutions Architect.",
+            title="Solutions Architect",
+        )
+        == "CONTRACT"
+    )
+
+
+def test_parse_day_rate_salary():
+    parsed = DiscoveryService._parse_salary("£700-800 per day Outside IR35")
+    assert parsed == {"salary_min": 154000, "salary_max": 176000}
+
+
+def test_build_prompt_includes_contract_day_rate():
+    service = DiscoveryService.__new__(DiscoveryService)
+    prefs = Preferences(
+        target_titles=["Enterprise Architect"],
+        locations=["London"],
+        salary_min=80000,
+        job_types=["PERM", "CONTRACT"],
+    )
+    prompt = service._build_prompt(prefs)
+    assert "per day" in prompt
+    assert "CONTRACT" in prompt

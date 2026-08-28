@@ -21,6 +21,7 @@ from app.services.scheduler import DiscoveryScheduler
 router = APIRouter(prefix="/api")
 
 Repo = Annotated[Any, Depends(get_repository)]
+REPAIR_VERSION = "cv-full-1"
 
 
 def get_writer() -> ApplicationWriter:
@@ -85,6 +86,10 @@ async def health(
             and db_configured
             and settings.anthropic_configured
         ),
+        "repair_version": REPAIR_VERSION,
+        "auto_apply": settings.auto_apply,
+        "smtp_configured": getattr(settings, "smtp_configured", False),
+        "full_cv_scoring": True,
     }
     if scheduler is not None:
         payload["scheduler"] = scheduler.status()
@@ -106,6 +111,27 @@ async def run_pipeline(
     _require_trigger_auth(settings, authorization)
     scheduler = _get_scheduler(request)
     result = await scheduler.run_once(trigger="api")
+    if result.get("status") == "rejected":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result)
+    if result.get("status") == "error":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=result,
+        )
+    return result
+
+
+@router.post("/pipeline/backfill")
+async def backfill_pipeline(
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+    authorization: Annotated[str | None, Header()] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 25,
+) -> dict[str, object]:
+    """Score existing NEW jobs (including incorrect scores below 60) without discovery."""
+    _require_trigger_auth(settings, authorization)
+    scheduler = _get_scheduler(request)
+    result = await scheduler.run_backfill(trigger="api", limit=limit)
     if result.get("status") == "rejected":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result)
     if result.get("status") == "error":
@@ -160,6 +186,8 @@ async def get_analytics(repository: Repo) -> dict[str, object]:
     total = sum(counts.values())
     job_type_counts = await repository.get_job_type_counts()
     submitted_by_type = await repository.get_submitted_job_type_counts()
+    jobs = await repository.list_jobs()
+    scores = [job.score for job in jobs if job.score is not None]
     return {
         "total_jobs": total,
         "status_counts": counts,
@@ -168,6 +196,10 @@ async def get_analytics(repository: Repo) -> dict[str, object]:
         "submitted": counts.get("SUBMITTED", 0),
         "interviews": counts.get("INTERVIEW", 0),
         "offers": counts.get("OFFER", 0),
+        "score_ge_60": sum(1 for score in scores if score >= 60),
+        "draft_ready": counts.get("DRAFT", 0) + counts.get("READY", 0),
+        "max_score": max(scores) if scores else None,
+        "unscored": sum(1 for job in jobs if job.score is None),
     }
 
 

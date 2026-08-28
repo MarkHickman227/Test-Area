@@ -30,6 +30,7 @@ class FakeRepository:
             cover_letter="Original cover letter",
         )
         self.preferences = None
+        self.cvs: list = []
 
     async def list_jobs(self, status_filter=None, job_type=None, min_score=None, max_score=None):
         return [
@@ -83,6 +84,32 @@ class FakeRepository:
     async def get_submitted_job_type_counts(self):
         return {}
 
+    async def list_cvs(self):
+        return self.cvs
+
+    async def create_cv(self, data):
+        from uuid import uuid4
+
+        from app.models import CvRecord
+
+        self.created_cv = data
+        record = CvRecord(
+            id=uuid4(),
+            label=data["label"],
+            file_name=data["file_name"],
+            raw_text=data["raw_text"],
+            parsed_profile=data.get("parsed_profile") or {},
+        )
+        self.cvs.append(record)
+        return record
+
+    async def update_cv_profile(self, cv_id, parsed_profile):
+        for cv in self.cvs:
+            if cv.id == cv_id:
+                cv.parsed_profile = parsed_profile or {}
+                return cv
+        raise AssertionError("CV not found")
+
 
 class FakeWriter:
     async def regenerate(self, job, artifact, notes=None):
@@ -101,6 +128,16 @@ def make_client():
 
 
 
+def test_root_serves_dashboard():
+    client, _ = make_client()
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "ApplyPilot" in response.text
+    assert "Job application dashboard" in response.text
+
+
 def test_health_reports_configuration_state():
     client, _ = make_client()
 
@@ -112,12 +149,24 @@ def test_health_reports_configuration_state():
     assert "supabase_configured" in body
     assert body["discovery_schedule_mode"] == "twice_daily"
     assert body["discovery_times"] == ["08:00", "20:00"]
+    assert body["repair_version"] == "cv-full-1"
+    assert body["auto_apply"] is True
+    assert body["full_cv_scoring"] is True
 
 
 def test_pipeline_run_skips_without_credentials():
     client, _ = make_client()
 
     response = client.post("/api/pipeline/run")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "skipped"
+
+
+def test_pipeline_backfill_skips_without_credentials():
+    client, _ = make_client()
+
+    response = client.post("/api/pipeline/backfill")
 
     assert response.status_code == 200
     assert response.json()["status"] == "skipped"
@@ -163,6 +212,10 @@ def test_analytics_returns_status_counts():
     assert data["status_counts"]["DRAFT"] == 1
     assert data["job_type_counts"]["PERM"] == 1
     assert data["submitted_by_type"] == {}
+    assert data["score_ge_60"] == 1
+    assert data["draft_ready"] == 1
+    assert data["max_score"] == 86
+    assert data["unscored"] == 0
 
 
 def test_preferences_can_be_saved():
@@ -181,3 +234,42 @@ def test_preferences_can_be_saved():
 
     assert response.status_code == 200
     assert response.json()["target_titles"] == ["Enterprise Architect"]
+
+
+def test_create_cv_parses_profile():
+    client, repository = make_client()
+
+    response = client.post(
+        "/api/cvs",
+        json={
+            "label": "Current",
+            "file_name": "CV_current.docx",
+            "raw_text": "Enterprise Architect with Azure, AWS, TOGAF and 20 years of contract delivery.",
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert "Azure" in body["parsed_profile"]["skills"]
+    assert repository.created_cv["parsed_profile"]["contract_delivery_years"] == 20
+    assert "open_to_contract" not in repository.created_cv["parsed_profile"]
+
+
+def test_reparse_cvs_rebuilds_profile():
+    client, repository = make_client()
+    created = client.post(
+        "/api/cvs",
+        json={
+            "label": "Current",
+            "file_name": "CV_current.docx",
+            "raw_text": "Enterprise Architect with Azure and TOGAF.",
+        },
+    )
+    assert created.status_code == 201
+    repository.cvs[0].parsed_profile = {}
+
+    response = client.post("/api/cvs/reparse")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "Azure" in body[0]["parsed_profile"]["skills"]

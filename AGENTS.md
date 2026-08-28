@@ -2,7 +2,7 @@
 
 ## Cursor Cloud specific instructions
 
-ApplyPilot is a FastAPI (Python 3.12) backend + vanilla JS frontend for AI-powered job application review.
+ApplyPilot is a FastAPI (Python 3.12) backend + vanilla JS frontend that finds jobs, scores them against the **full uploaded CV**, and **applies automatically** for matches (score 60+).
 
 - Product: `docs/user-guide.md`
 - Schedule: `docs/twice-daily-automation.md`
@@ -29,7 +29,7 @@ When this agent is started by the twice-daily automation:
 4. If `PIPELINE_TRIGGER_TOKEN` is set, send `Authorization: Bearer <token>`.
 5. Verify the response `status` is `ok` or a clear intentional `skipped` reason.
 6. Do **not** open a PR unless code changes were required to unblock the run.
-7. Never submit job applications. ApplyPilot is review-only.
+7. Jobs that score 60+ against the full CV should be auto-applied (status `SUBMITTED`). Do not invent CV claims.
 
 ### Required secrets (Cloud Agents dashboard + VPS `config/.env`)
 
@@ -49,7 +49,7 @@ When this agent is started by the twice-daily automation:
 3. `tasks-explain-diff` / Bugbot / security-review — review
 4. VPS Docker Compose + Portainer — deploy/ops (`docs/vps-deployment.md`)
 5. `/api/health` + `/api/scheduler/status` — monitor
-6. Never submit applications; human review only
+6. Auto-apply matching jobs against the full CV; do not invent experience
 
 ### Tests
 

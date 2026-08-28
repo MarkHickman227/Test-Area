@@ -156,9 +156,23 @@ class SupabaseRepository:
         rows = await self._request(
             "GET",
             "cvs",
-            params={"select": "id,label,parsed_profile", "order": "created_at.desc", "limit": "1"},
+            params={"select": "id,label,parsed_profile,raw_text", "order": "created_at.desc", "limit": "1"},
         )
         return rows[0] if rows else None
+
+    async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
+        rows = await self._request(
+            "GET",
+            "jobs",
+            params={
+                "select": "*",
+                "status": "eq.NEW",
+                "or": "(score.is.null,score.lt.60)",
+                "order": "created_at.desc",
+                "limit": str(limit),
+            },
+        )
+        return list(rows or [])
 
     async def list_cvs(self) -> list[CvRecord]:
         rows = await self._request(
@@ -168,6 +182,19 @@ class SupabaseRepository:
 
     async def create_cv(self, data: dict[str, Any]) -> CvRecord:
         rows = await self._request("POST", "cvs", json=data)
+        return CvRecord.model_validate(rows[0])
+
+    async def update_cv_profile(self, cv_id: UUID, parsed_profile: dict[str, Any]) -> CvRecord:
+        rows = await self._request(
+            "PATCH",
+            "cvs",
+            params={"id": f"eq.{cv_id}"},
+            json={"parsed_profile": parsed_profile or {}},
+        )
+        if not rows:
+            from fastapi import HTTPException, status
+
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CV not found")
         return CvRecord.model_validate(rows[0])
 
     async def delete_cv(self, cv_id: UUID) -> None:

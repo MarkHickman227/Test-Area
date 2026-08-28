@@ -2,9 +2,9 @@
 
 Version 1.0 | Avalon Creative Ltd | 28/05/2026
 
-ApplyPilot is an AI job application agent that runs on your own server. It finds jobs, scores them against your CV, and generates tailored cover letters, CV summaries, screening answers, and recruiter notes for your review.
+ApplyPilot is an AI job application agent that runs on your own server. It finds jobs, scores them against your **full uploaded CV**, writes the application, and applies automatically for roles that score 60 or above.
 
-ApplyPilot does not submit applications automatically. You stay in control of every submission.
+When SMTP is configured and the listing has a contact email, ApplyPilot emails the cover letter plus CV. Listings without a contact are stored as Submitted with the application pack and source URL.
 
 ## What ApplyPilot does
 
@@ -13,9 +13,8 @@ ApplyPilot does not submit applications automatically. You stay in control of ev
 | Discover | Searches on your schedule using your titles, locations, salary, and perm/contract preference. | None |
 | Enrich | Reads each job description and extracts skills, requirements, seniority, and keywords. | None |
 | Score | Gives each job a 0-100 suitability score vs your CV, with strengths and gaps. | None |
-| Generate | Writes a tailored cover letter, CV summary, and screening answers. | None |
-| Recruiter | Detects agency roles and drafts a personalised recruiter outreach email. | None |
-| Review | Surfaces everything in your dashboard for editing and approval. | You review, edit, and submit |
+| Generate | Writes a tailored cover letter and CV summary from the full CV. | None |
+| Apply | Sends the pack (email when a contact exists; otherwise records Submitted against the listing). | None — dashboard is for tracking |
 
 ## Setup
 
@@ -73,12 +72,12 @@ Filter by status, job type, or score range to focus on applications needing atte
 
 The left panel shows the job description, parsed requirements, and fit explanation. The right panel contains the CV/profile summary, cover letter, and screening Q&A tabs.
 
-Always read the generated content before submitting. The AI tailors the draft to the job, but personal edits usually improve the application.
+The dashboard shows the job, the fit against your full CV, and the application that was sent.
 
 | Action | When to use it | What it does |
 | --- | --- | --- |
-| Mark as Ready | You reviewed and approved the application. | Sets status to `READY`. |
-| Mark as Submitted | You manually applied. | Sets status to `SUBMITTED` and records the date. |
+| Mark as Ready | Rare — only if you pause auto-apply. | Sets status to `READY`. |
+| Mark as Submitted | The pipeline already does this at 60+. Use only to correct a miss. | Sets status to `SUBMITTED`. |
 | Regenerate | You want a different angle. | Calls the AI again and saves a new version. |
 | Ignore | The job is irrelevant. | Removes it from the active dashboard view. |
 
@@ -109,10 +108,10 @@ When a recruiter responds, update the job to `INTERVIEW`, `OFFER`, or `REJECTED`
 
 | Status | Meaning | Next action |
 | --- | --- | --- |
-| `NEW` | Scored and queued. | Wait for generation. |
-| `DRAFT` | Artifacts generated. | Review in Application Builder. |
-| `READY` | Reviewed and approved. | Apply manually, then mark submitted. |
-| `SUBMITTED` | Applied manually. | Wait for response. |
+| `NEW` | Found, not yet scored. | Wait for the pipeline. |
+| `DRAFT` | Pack written but auto-apply was off. | Pipeline will submit on the next run if auto-apply is on. |
+| `READY` | Held. | Unusual — auto-apply should have submitted. |
+| `SUBMITTED` | Applied. | Wait for response. |
 | `INTERVIEW` | Interview booked. | Prepare and update after outcome. |
 | `OFFER` | Offer received. | Close your pipeline. |
 | `REJECTED` | Application unsuccessful. | No action needed. |
