@@ -101,6 +101,13 @@ def profile_for_scoring(cv: dict[str, Any] | None) -> dict[str, Any] | None:
         return None
     profile = dict(cv.get("parsed_profile") or {})
     raw = (cv.get("raw_text") or profile.get("raw_text") or "").strip()
+    skills_or_roles = profile.get("skills") or profile.get("roles")
+    # Live jobs were scored 0–25 with "profile is essentially empty" when
+    # parsed_profile was {}. Rebuild skills/roles from the uploaded CV text.
+    if raw and not skills_or_roles:
+        parsed = parse_cv_profile(raw)
+        if parsed:
+            return parsed
     if raw:
         profile.setdefault("raw_text", raw[:12000])
         profile.setdefault("summary", raw[:4000])

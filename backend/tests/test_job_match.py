@@ -1,3 +1,4 @@
+from app.services.cv_parser import profile_for_scoring
 from app.services.job_match import compact_profile, match_job_to_cv
 
 
@@ -40,6 +41,108 @@ def test_match_scores_azure_contract_solution_architect():
     }
     result = match_job_to_cv(job, CV, {"target_titles": ["Solutions Architect"], "locations": ["Remote UK"]})
     assert result["score"] >= 60
+    assert "Azure" in result["strengths"]
+
+
+AZURE_FS_CONTRACT = {
+    "title": "Solution Architect - Azure Cloud",
+    "company": "Financial services organisation via Sanderson",
+    "location": "Remote UK",
+    "job_type": "CONTRACT",
+    "description": (
+        "Contract Solution Architect role in a financial services cloud transformation "
+        "programme. Responsible for designing and governing end-to-end solutions aligned "
+        "to enterprise architecture and regulatory requirements."
+    ),
+    "parsed_requirements": {
+        "keywords": [
+            "Solution Architect",
+            "Azure",
+            "Cloud",
+            "Financial services",
+            "Enterprise architecture",
+            "Governance",
+            "Regulatory",
+            "Transformation",
+            "Contract",
+            "Design",
+        ],
+        "seniority": "senior",
+        "certifications": [
+            "Microsoft Azure Solutions Architect Expert",
+            "Azure Administrator Certified",
+        ],
+        "required_skills": [
+            "Azure cloud architecture",
+            "Solution design",
+            "Enterprise architecture",
+            "Cloud governance",
+            "Regulatory compliance",
+            "Technical leadership",
+            "Stakeholder management",
+        ],
+        "domain_knowledge": [
+            "Financial services",
+            "Cloud transformation",
+            "Regulatory compliance",
+            "Enterprise systems",
+            "Digital transformation",
+        ],
+        "experience_years": 8,
+        "nice_to_have_skills": [
+            "Multi-cloud experience",
+            "Infrastructure as Code",
+            "DevOps practices",
+            "Security architecture",
+            "Cost optimization",
+            "Migration strategy",
+        ],
+    },
+}
+
+
+AZURE_FS_PREFS = {
+    "target_titles": ["Enterprise Architect", "Solutions Architect", "CTO"],
+    "locations": ["London", "Remote UK"],
+    "salary_min": 80000,
+    "salary_max": 160000,
+    "job_types": ["PERM", "CONTRACT"],
+    "industries": ["Financial Services", "Technology"],
+}
+
+EMPTY_PROFILE_EXPLANATION = "the candidate profile is essentially empty"
+
+
+def test_live_azure_fs_contract_is_a_good_cv_fit_not_empty_profile():
+    """Regression: live job 4708a681 was scored 15 with 'profile is essentially empty'."""
+    result = match_job_to_cv(AZURE_FS_CONTRACT, CV, AZURE_FS_PREFS)
+    assert result["score"] >= 60
+    assert result["score"] != 15
+    assert EMPTY_PROFILE_EXPLANATION not in result["score_explanation"].lower()
+    assert "empty" not in result["score_explanation"].lower()
+    assert "Azure" in result["strengths"]
+    assert "solution architect" in " ".join(result["strengths"]).lower()
+
+
+def test_empty_stored_profile_still_matches_live_azure_job_from_cv_text():
+    """Same live job, same stored-CV bug: parsed_profile was {}."""
+    cv_row = {
+        "parsed_profile": {},
+        "raw_text": (
+            "Mark Hickman\nProfessional Profile\n"
+            "Enterprise Architecture Leader with Azure, AWS, TOGAF and Prince2.\n"
+            "Over 20 years of contract delivery.\n"
+            "Professional Experience\nEnterprise Architect, Solution Architect\n"
+        ),
+    }
+    profile = profile_for_scoring(cv_row)
+    result = match_job_to_cv(AZURE_FS_CONTRACT, profile, AZURE_FS_PREFS)
+    assert profile is not None
+    assert "Azure" in profile["skills"]
+    assert result["score"] >= 60
+    assert result["score"] != 15
+    assert EMPTY_PROFILE_EXPLANATION not in result["score_explanation"].lower()
+    assert "empty" not in result["score_explanation"].lower()
     assert "Azure" in result["strengths"]
 
 

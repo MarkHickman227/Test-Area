@@ -47,7 +47,8 @@ def test_profile_for_scoring_uses_raw_text_when_parsed_profile_empty():
     cv = {"parsed_profile": {}, "raw_text": SAMPLE}
     profile = profile_for_scoring(cv)
     assert profile is not None
-    assert "Azure" in profile["raw_text"] or "Enterprise Architecture" in profile["summary"]
+    assert "Azure" in profile["skills"]
+    assert "enterprise architect" in " ".join(profile["roles"]).lower()
 
 
 def test_profile_for_scoring_rejects_empty_cv():

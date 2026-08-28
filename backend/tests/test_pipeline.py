@@ -223,3 +223,67 @@ async def test_pipeline_backfill_skips_discovery():
     assert stats["processed"] == 1
     assert stats["scored"] == 1
     assert repo.updated_fields[JOB_ID]["score"] == 85
+
+
+@pytest.mark.asyncio
+async def test_pipeline_rescores_azure_job_when_parsed_profile_was_empty():
+    from types import SimpleNamespace
+
+    from app.services.enrichment import EnrichmentService
+
+    existing = {
+        "id": JOB_ID,
+        "title": "Solution Architect - Azure Cloud",
+        "company": "Financial services organisation via Sanderson",
+        "location": "Remote UK",
+        "job_type": "CONTRACT",
+        "status": "NEW",
+        "score": 15,
+        "score_explanation": "The candidate profile is essentially empty.",
+        "description": (
+            "Contract Solution Architect role in a financial services cloud transformation "
+            "programme. Responsible for designing and governing end-to-end solutions aligned "
+            "to enterprise architecture and regulatory requirements."
+        ),
+        "parsed_requirements": {
+            "required_skills": [
+                "Azure cloud architecture",
+                "Enterprise architecture",
+            ],
+            "keywords": ["Azure", "Solution Architect"],
+        },
+        "source_url": "https://example.com/azure-sa-4708a681",
+    }
+    cv = {
+        "id": "22222222-2222-2222-2222-222222222222",
+        "label": "Current",
+        "raw_text": (
+            "Mark Hickman\nProfessional Profile\n"
+            "Enterprise Architecture Leader with Azure, AWS, TOGAF and Prince2.\n"
+            "Over 20 years of contract delivery.\n"
+            "Professional Experience\nEnterprise Architect, Solution Architect\n"
+        ),
+        "parsed_profile": {},
+    }
+    pipeline = _pipeline(
+        discovery=FakeDiscoveryService(jobs=[]),
+        enrichment=EnrichmentService(SimpleNamespace(anthropic_configured=False)),
+    )
+    repo = FakePipelineRepository(cv=cv, existing_jobs=[existing])
+    prefs = Preferences(
+        target_titles=["Enterprise Architect", "Solutions Architect", "CTO"],
+        locations=["London", "Remote UK"],
+        salary_min=80000,
+        job_types=["PERM", "CONTRACT"],
+    )
+
+    stats = await pipeline.backfill(repo, prefs)
+    explanation = repo.updated_fields[JOB_ID]["score_explanation"].lower()
+
+    assert stats["scored"] == 1
+    assert stats["generated"] == 1
+    assert repo.updated_fields[JOB_ID]["score"] >= 60
+    assert repo.updated_fields[JOB_ID]["score"] != 15
+    assert "empty" not in explanation
+    assert "azure" in explanation or "solution architect" in explanation
+    assert repo.jobs[JOB_ID]["status"] == "DRAFT"
