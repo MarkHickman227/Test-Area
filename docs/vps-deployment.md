@@ -38,7 +38,16 @@ curl -s http://127.0.0.1:8000/api/health   # expect repair_version: cv-backfill-
 curl -s http://127.0.0.1:8000/api/scheduler/status
 ```
 
-After this CV/scoring repair is on the VPS:
+## One-line repair pull (Hostinger console)
+
+If cloud-agent SSH is unavailable, paste this as **root** in the Hostinger VPS browser terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/repair-applypilot-cv-53b6/scripts/vps-pull-repair.sh | bash
+```
+
+That keeps `config/.env` and the Postgres volume. It does **not** run `docker compose down -v`.
+
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/cvs/reparse
