@@ -1,6 +1,7 @@
 import pytest
 
 from app.models import Preferences
+from app.services.cv_parser import is_complete_profile
 from app.services.pipeline import Pipeline
 
 
@@ -25,6 +26,11 @@ class FakePipelineRepository:
         self.jobs = {job["id"]: job for job in (existing_jobs or [])}
 
     async def get_best_cv(self):
+        return self.cv
+
+    async def update_cv_profile(self, cv_id, parsed_profile):
+        if self.cv:
+            self.cv["parsed_profile"] = parsed_profile or {}
         return self.cv
 
     async def insert_job(self, job):
@@ -287,3 +293,6 @@ async def test_pipeline_rescores_azure_job_when_parsed_profile_was_empty():
     assert "empty" not in explanation
     assert "azure" in explanation or "solution architect" in explanation
     assert repo.jobs[JOB_ID]["status"] == "DRAFT"
+    assert is_complete_profile(repo.cv["parsed_profile"])
+    assert "Azure" in repo.cv["parsed_profile"]["skills"]
+    assert repo.cv["parsed_profile"]["roles"]

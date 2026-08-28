@@ -34,7 +34,7 @@ cd /root/applypilot
 ./scripts/backup-db.sh          # snapshot before changes
 docker compose up -d --build    # never add -v
 docker compose ps
-curl -s http://127.0.0.1:8000/api/health   # expect repair_version: cv-match-3
+curl -s http://127.0.0.1:8000/api/health   # expect repair_version: cv-match-4
 curl -s http://127.0.0.1:8000/api/scheduler/status
 ```
 

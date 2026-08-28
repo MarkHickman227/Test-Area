@@ -25,6 +25,12 @@ _SALES_TERMS = (
     "commission",
 )
 
+_TERM_ALIASES = {
+    "solution architect": ("solution architect", "solutions architect"),
+    "solutions architect": ("solutions architect", "solution architect"),
+    "enterprise architect": ("enterprise architect", "enterprise architecture"),
+}
+
 
 def match_job_to_cv(
     job: dict[str, Any],
@@ -40,9 +46,11 @@ def match_job_to_cv(
     job_text = _job_text(job)
     skills = [str(s) for s in (cv_profile.get("skills") or []) if str(s).strip()]
     domains = [str(d) for d in (cv_profile.get("domains") or []) if str(d).strip()]
+    cv_roles = [str(r) for r in (cv_profile.get("roles") or []) if str(r).strip()]
     matched_skills = [s for s in skills if _term_in_text(s, job_text)]
     matched_domains = [d for d in domains if _term_in_text(d, job_text)]
-    role_hits = [role for role in _ROLE_TERMS if _term_in_text(role, job_text)]
+    matched_cv_roles = [r for r in cv_roles if _term_in_text(r, job_text)]
+    role_hits = matched_cv_roles or [role for role in _ROLE_TERMS if _term_in_text(role, job_text)]
     title = (job.get("title") or "").lower()
     sales_role = any(term in title for term in _SALES_TERMS) and "architect" not in title
 
@@ -84,6 +92,7 @@ def compact_profile(cv_profile: dict[str, Any]) -> dict[str, Any]:
         "experience_years",
         "contract_delivery_years",
         "open_to_contract",
+        "certifications",
     ):
         if cv_profile.get(key) not in (None, "", [], {}):
             compact[key] = cv_profile[key]
@@ -97,9 +106,14 @@ def _term_in_text(term: str, text: str) -> bool:
     needle = str(term or "").strip().lower()
     if not needle:
         return False
-    if len(needle) <= 3 or needle in {"api", "crm", "rpa", "uml", "m&a"}:
-        return re.search(rf"\b{re.escape(needle)}\b", text) is not None
-    return needle in text
+    variants = _TERM_ALIASES.get(needle, (needle,))
+    for variant in variants:
+        if len(variant) <= 3 or variant in {"api", "crm", "rpa", "uml", "m&a"}:
+            if re.search(rf"\b{re.escape(variant)}\b", text) is not None:
+                return True
+        elif variant in text:
+            return True
+    return False
 
 
 def _job_text(job: dict[str, Any]) -> str:
@@ -164,11 +178,11 @@ def _explanation(
         "unless the title is clearly unrelated."
     ]
     if role_hits:
-        bits.append("Role overlap: " + ", ".join(role_hits[:4]) + ".")
+        bits.append("Parsed CV roles that overlap the listing: " + ", ".join(role_hits[:4]) + ".")
     if matched_skills:
-        bits.append("Skills named in the job text/requirements: " + ", ".join(matched_skills[:8]) + ".")
+        bits.append("Parsed CV skills named in the job: " + ", ".join(matched_skills[:8]) + ".")
     else:
-        bits.append("No CV skills were named in the job description.")
+        bits.append("No parsed CV skills were named in the job description.")
     if matched_domains:
         bits.append("Domain overlap: " + ", ".join(matched_domains[:4]) + ".")
     if gaps:

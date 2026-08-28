@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.deps import get_repository
 from app.models import CvCreateRequest, CvRecord
-from app.services.cv_parser import parse_cv_profile
+from app.services.cv_parser import is_complete_profile, parse_cv_profile
 
 router = APIRouter(prefix="/api")
 
@@ -26,11 +26,12 @@ async def create_cv(request: CvCreateRequest, repository: Repo) -> CvRecord:
 
 @router.post("/cvs/reparse", response_model=list[CvRecord])
 async def reparse_cvs(repository: Repo) -> list[CvRecord]:
-    updated: list[CvRecord] = []
     for cv in await repository.list_cvs():
         profile = parse_cv_profile(cv.raw_text)
-        updated.append(await repository.update_cv_profile(cv.id, profile))
-    return updated
+        if not is_complete_profile(profile):
+            continue
+        await repository.update_cv_profile(cv.id, profile)
+    return await repository.list_cvs()
 
 
 @router.delete("/cvs/{cv_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -55,7 +55,10 @@ class Pipeline:
         stats: dict[str, int],
         limit: int,
     ) -> None:
-        cv_profile = profile_for_scoring(await repository.get_best_cv())
+        cv_row = await repository.get_best_cv()
+        cv_profile = profile_for_scoring(cv_row)
+        if cv_row and cv_profile:
+            await repository.update_cv_profile(cv_row["id"], cv_profile)
         if not cv_profile:
             logger.warning("No usable CV loaded — scoring and artifact generation will be skipped")
 

@@ -66,13 +66,21 @@ async function loadCvs() {
       return;
     }
     container.innerHTML = cvs.map((cv) => {
-      const skillCount = (cv.parsed_profile && cv.parsed_profile.skills && cv.parsed_profile.skills.length) || 0;
-      const skills = skillCount ? ` | ${skillCount} skills parsed` : " | not parsed";
+      const profile = cv.parsed_profile || {};
+      const skillList = profile.skills || [];
+      const parsed = skillList.length
+        ? `${skillList.length} skills parsed`
+        : "not parsed";
+      const roles = (profile.roles || []).slice(0, 6).join(", ");
+      const skills = skillList.slice(0, 12).join(", ");
+      const domains = (profile.domains || []).slice(0, 6).join(", ");
       return `
       <article class="cv-item card">
         <strong>${escapeHtml(cv.label)}</strong>
-        <span class="meta">${escapeHtml(cv.file_name)} | ${cv.raw_text ? cv.raw_text.length + " chars" : "empty"}${skills}</span>
+        <span class="meta">${escapeHtml(cv.file_name)} | ${cv.raw_text ? cv.raw_text.length + " chars" : "empty"} | ${parsed}</span>
         <button class="secondary" onclick="deleteCv('${cv.id}')">Delete</button>
+        <p class="cv-parsed">${escapeHtml(roles || "No roles parsed")}${domains ? " | " + escapeHtml(domains) : ""}</p>
+        <p class="cv-parsed">${escapeHtml(skills || "No skills parsed")}</p>
       </article>
     `;
     }).join("");
@@ -85,6 +93,17 @@ async function deleteCv(id) {
   await fetch(`${apiBase}/cvs/${id}`, { method: "DELETE" });
   loadCvs();
 }
+
+async function reparseCvs() {
+  try {
+    await request("/cvs/reparse", { method: "POST" });
+    loadCvs();
+  } catch (error) {
+    alert(`Failed to reparse CVs: ${error.message}`);
+  }
+}
+
+document.getElementById("cv-reparse").addEventListener("click", reparseCvs);
 
 document.getElementById("cv-upload").addEventListener("click", async () => {
   const label = document.getElementById("cv-label").value.trim();

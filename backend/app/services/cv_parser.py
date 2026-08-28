@@ -1,4 +1,4 @@
-"""Turn pasted CV text into a scoring profile so empty {} profiles cannot happen."""
+"""Turn uploaded CV text into a complete scoring profile. Empty {} is not a profile."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from typing import Any
 _SKILL_TERMS = (
     "Azure",
     "AWS",
+    "hybrid cloud",
     "TOGAF",
     "Prince2",
     "PRINCE2",
@@ -32,17 +33,21 @@ _SKILL_TERMS = (
     "enterprise architecture",
     "solutions architecture",
     "cloud security",
+    "data lake",
+    "single sign-on",
+    "SAP",
     "API",
     "RPA",
     "CRM",
     "M&A",
 )
 
-_ROLE_RE = re.compile(
-    r"(?im)^\s*(enterprise architect|solutions architect|solution architect|"
-    r"cto|chief technology officer|lead architect|principal architect|"
-    r"technology director|it director|architecture director|"
-    r"ai & automation consultant|business mentor).*$"
+_ROLE_TITLE_RE = re.compile(
+    r"(?i)\b(enterprise architect|solutions architect|solution architect|"
+    r"data architect|chief technology officer|cto|lead architect|"
+    r"principal architect|technology director|it director|"
+    r"architecture director|ai & automation consultant|business mentor|"
+    r"project manager)\b"
 )
 
 _CONTRACT_YEARS_RE = re.compile(
@@ -60,6 +65,10 @@ _OPEN_TO_CONTRACT_RE = re.compile(
     r"(?:new\s+)?(?:contract|contracting|freelance)(?:\s+(?:roles?|work|opportunities))?\b"
 )
 
+_CERT_RE = re.compile(
+    r"(?i)\b(TOGAF(?:\s*[\d.]+)?|Prince\s*2|PRINCE2)(?:\s+certified(?:\s+project manager)?)?\b"
+)
+
 
 def parse_cv_profile(raw_text: str) -> dict[str, Any]:
     text = (raw_text or "").strip()
@@ -68,17 +77,17 @@ def parse_cv_profile(raw_text: str) -> dict[str, Any]:
 
     lowered = text.lower()
     skills = [term for term in _SKILL_TERMS if term.lower() in lowered]
-    roles = [match.group(0).strip() for match in _ROLE_RE.finditer(text)]
-    summary = _profile_section(text) or text[:4000]
+    roles = _roles(text)
+    summary = _profile_section(text) or re.sub(r"\s+", " ", text)[:4000]
     profile: dict[str, Any] = {
         "summary": summary[:4000],
-        "raw_text": text[:12000],
         "skills": skills,
-        "roles": roles[:12],
+        "roles": roles,
         "domains": _domains(lowered),
+        "certifications": _certifications(text),
     }
 
-    seniority = _seniority(roles)
+    seniority = _seniority(roles, text)
     if seniority:
         profile["seniority"] = seniority
 
@@ -96,56 +105,99 @@ def parse_cv_profile(raw_text: str) -> dict[str, Any]:
     return profile
 
 
+def is_complete_profile(profile: dict[str, Any] | None) -> bool:
+    if not profile:
+        return False
+    skills = [s for s in (profile.get("skills") or []) if str(s).strip()]
+    roles = [r for r in (profile.get("roles") or []) if str(r).strip()]
+    summary = (profile.get("summary") or "").strip()
+    return bool(skills or roles) and bool(summary)
+
+
 def profile_for_scoring(cv: dict[str, Any] | None) -> dict[str, Any] | None:
     if not cv:
         return None
-    profile = dict(cv.get("parsed_profile") or {})
-    raw = (cv.get("raw_text") or profile.get("raw_text") or "").strip()
-    skills_or_roles = profile.get("skills") or profile.get("roles")
-    # Live jobs were scored 0–25 with "profile is essentially empty" when
-    # parsed_profile was {}. Rebuild skills/roles from the uploaded CV text.
-    if raw and not skills_or_roles:
-        parsed = parse_cv_profile(raw)
-        if parsed:
-            return parsed
-    if raw:
-        profile.setdefault("raw_text", raw[:12000])
-        profile.setdefault("summary", raw[:4000])
-    if not any(profile.get(key) for key in ("skills", "raw_text", "summary", "roles")):
-        return None
-    return profile
+    raw = (cv.get("raw_text") or "").strip()
+    stored = dict(cv.get("parsed_profile") or {})
+    parsed = parse_cv_profile(raw) if raw else {}
+    if is_complete_profile(parsed):
+        return parsed
+    if is_complete_profile(stored):
+        return stored
+    return None
+
+
+def _roles(text: str) -> list[str]:
+    found: list[str] = []
+    seen: set[str] = set()
+    for match in _ROLE_TITLE_RE.finditer(text):
+        prefix = text[max(0, match.start() - 24) : match.start()].lower()
+        if "certified" in prefix:
+            continue
+        title = re.sub(r"\s+", " ", match.group(1)).strip()
+        key = title.lower().replace("solutions architect", "solution architect")
+        if key in {"cto"}:
+            title = "CTO"
+            key = "cto"
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append(title)
+    return found[:12]
+
+
+def _certifications(text: str) -> list[str]:
+    found: list[str] = []
+    seen: set[str] = set()
+    for match in _CERT_RE.finditer(text):
+        label = re.sub(r"\s+", " ", match.group(1)).strip()
+        key = label.lower().replace("prince 2", "prince2")
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append(label)
+    if any(re.search(r"(?i)togaf\s+\d", item) for item in found):
+        found = [item for item in found if not re.fullmatch(r"(?i)togaf", item)]
+    return found[:8]
 
 
 def _profile_section(text: str) -> str:
     match = re.search(
-        r"professional profile\s*(.+?)(?:\nprofessional experience|\nexperience\b)",
+        r"professional profile\s*(.+?)(?:\nprofessional experience|\nexperience\b|"
+        r"\ntechnical proficiencies)",
         text,
         flags=re.IGNORECASE | re.DOTALL,
     )
-    if match:
-        return re.sub(r"\s+", " ", match.group(1)).strip()
-    return ""
+    if not match:
+        return ""
+    summary = re.sub(r"\s+", " ", match.group(1)).strip()
+    return re.sub(r"(?i)^(professional profile\s*)+", "", summary).strip()
 
 
 def _domains(lowered: str) -> list[str]:
     mapping = {
         "automotive": ("aston martin", "jaguar", "nissan", "automotive"),
-        "higher education": ("university", "department for education"),
+        "higher education": ("university", "department for education", "department of education"),
         "retail": ("wickes", "travis perkins", "specsavers"),
         "manufacturing": ("manufacturing",),
-        "public sector": ("department for education",),
+        "public sector": ("department for education", "department of education", "natural resources wales"),
+        "financial services": ("financial services", "vw financial"),
+        "healthcare": ("optum", "unitedhealth", "healthcare"),
         "sme automation": ("n8n", "avalon creative"),
     }
     found = [label for label, needles in mapping.items() if any(n in lowered for n in needles)]
     return found
 
 
-def _seniority(roles: list[str]) -> str | None:
-    role_text = " ".join(roles).lower()
-    if re.search(r"\b(?:cto|chief technology officer)\b", role_text):
+def _seniority(roles: list[str], text: str) -> str | None:
+    blob = f"{' '.join(roles)} {text}".lower()
+    if re.search(r"\b(?:cto|chief technology officer)\b", blob):
         return "executive"
-    if re.search(r"\b(?:technology|it|architecture) director\b", role_text):
+    if re.search(r"\b(?:technology|it|architecture) director\b", blob):
         return "director"
-    if re.search(r"\b(?:lead|principal) architect\b", role_text):
+    if re.search(
+        r"\b(?:lead|principal) architect|enterprise architect|enterprise architecture leader\b",
+        blob,
+    ):
         return "lead"
     return None

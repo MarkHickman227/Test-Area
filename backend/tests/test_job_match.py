@@ -133,17 +133,21 @@ def test_empty_stored_profile_still_matches_live_azure_job_from_cv_text():
             "Enterprise Architecture Leader with Azure, AWS, TOGAF and Prince2.\n"
             "Over 20 years of contract delivery.\n"
             "Professional Experience\nEnterprise Architect, Solution Architect\n"
+            "VW Financial Services\nSolutions Architect (Contract)\n"
         ),
     }
     profile = profile_for_scoring(cv_row)
     result = match_job_to_cv(AZURE_FS_CONTRACT, profile, AZURE_FS_PREFS)
     assert profile is not None
     assert "Azure" in profile["skills"]
+    assert "raw_text" not in profile
+    assert "financial services" in profile["domains"]
     assert result["score"] >= 60
     assert result["score"] != 15
     assert EMPTY_PROFILE_EXPLANATION not in result["score_explanation"].lower()
     assert "empty" not in result["score_explanation"].lower()
     assert "Azure" in result["strengths"]
+    assert "financial services" in result["score_explanation"].lower()
 
 
 def test_match_penalises_sales_account_director():

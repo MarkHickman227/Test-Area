@@ -149,7 +149,7 @@ def test_health_reports_configuration_state():
     assert "supabase_configured" in body
     assert body["discovery_schedule_mode"] == "twice_daily"
     assert body["discovery_times"] == ["08:00", "20:00"]
-    assert body["repair_version"] == "cv-match-3"
+    assert body["repair_version"] == "cv-match-4"
 
 
 def test_pipeline_run_skips_without_credentials():
