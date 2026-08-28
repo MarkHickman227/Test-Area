@@ -6,8 +6,8 @@ When a listing includes a contact email and SMTP is configured, ApplyPilot email
 
 ## What is included
 
-- FastAPI backend with health checks, job review endpoints, status transitions, and AI generation hooks.
-- Static frontend dashboard for filtering jobs, reviewing generated artifacts, and updating pipeline status.
+- FastAPI backend with health checks, job pipeline, auto-apply, and status tracking.
+- Static frontend dashboard for filtering jobs and viewing sent applications.
 - Twice-daily discovery scheduler with run locking and retries.
 - Supabase SQL schema and helper functions.
 - Docker Compose setup for VPS and local runs.
