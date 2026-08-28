@@ -56,8 +56,8 @@ docker compose up -d --build
 docker compose ps
 
 for _ in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:8000/api/health | grep -q 'cv-match-1'; then
-    echo "repair_version is cv-match-1"
+  if curl -fsS http://127.0.0.1:8000/api/health | grep -q 'cv-match-2'; then
+    echo "repair_version is cv-match-2"
     break
   fi
   sleep 2
@@ -66,7 +66,7 @@ curl -sS http://127.0.0.1:8000/api/health
 echo
 curl -sS -X POST http://127.0.0.1:8000/api/cvs/reparse
 echo
-curl -sS --max-time 300 -X POST 'http://127.0.0.1:8000/api/pipeline/backfill?limit=25'
+curl -sS --max-time 300 -X POST 'http://127.0.0.1:8000/api/pipeline/backfill?limit=40'
 echo
 curl -sS http://127.0.0.1:8000/api/analytics
 echo

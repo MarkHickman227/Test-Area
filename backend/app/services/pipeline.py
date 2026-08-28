@@ -12,7 +12,7 @@ from app.services.repository import SupabaseRepository
 logger = logging.getLogger(__name__)
 
 SCORE_THRESHOLD = 60
-BACKFILL_LIMIT = 25
+BACKFILL_LIMIT = 40
 
 
 class Pipeline:

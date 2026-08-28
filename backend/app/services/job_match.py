@@ -46,20 +46,22 @@ def match_job_to_cv(
     title = (job.get("title") or "").lower()
     sales_role = any(term in title for term in _SALES_TERMS) and "architect" not in title
 
-    score = 12
-    if any(role in title for role in _ROLE_TERMS) or "cto" in title.split():
-        score += 36
+    # Listings are already from the user's EA/SA/CTO search. Most should be
+    # apply-ready; only clearly unrelated titles stay below the draft threshold.
+    score = 72
+    if any(role in title for role in _ROLE_TERMS) or "cto" in title:
+        score += 10
     elif role_hits:
-        score += 18
+        score += 6
     if matched_skills:
-        score += min(36, 6 * len(matched_skills))
+        score += min(12, 3 * len(matched_skills))
     if matched_domains:
-        score += min(12, 4 * len(matched_domains))
+        score += min(6, 2 * len(matched_domains))
     score += _preference_bonus(job, job_text, preferences)
     if job.get("job_type") == "CONTRACT" and cv_profile.get("contract_delivery_years"):
-        score += 6
+        score += 4
     if sales_role:
-        score -= 28
+        score = min(score, 32)
     score = max(0, min(100, score))
 
     gaps = _gaps(job, matched_skills)
@@ -156,7 +158,11 @@ def _explanation(
     gaps: list[str],
 ) -> str:
     title = job.get("title") or "This role"
-    bits = [f"{title} scored {score}/100 against the uploaded CV."]
+    bits = [
+        f"{title} scored {score}/100 against the uploaded CV. "
+        "This listing is in the current search, so it is treated as apply-ready "
+        "unless the title is clearly unrelated."
+    ]
     if role_hits:
         bits.append("Role overlap: " + ", ".join(role_hits[:4]) + ".")
     if matched_skills:

@@ -57,6 +57,18 @@ def test_match_penalises_sales_account_director():
     assert result["score"] < 50
 
 
+def test_match_treats_typical_search_listing_as_apply_ready():
+    job = {
+        "title": "Solutions Architect",
+        "location": "London",
+        "job_type": "PERM",
+        "description": "London hybrid solutions architect posting.",
+        "parsed_requirements": {},
+    }
+    result = match_job_to_cv(job, CV, {"target_titles": ["Solutions Architect"], "locations": ["London"]})
+    assert result["score"] >= 60
+
+
 def test_match_without_cv_does_not_invent_a_score():
     result = match_job_to_cv({"title": "Enterprise Architect"}, None)
     assert result["score"] is None

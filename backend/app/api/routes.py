@@ -21,7 +21,7 @@ from app.services.scheduler import DiscoveryScheduler
 router = APIRouter(prefix="/api")
 
 Repo = Annotated[Any, Depends(get_repository)]
-REPAIR_VERSION = "cv-match-1"
+REPAIR_VERSION = "cv-match-2"
 
 
 def get_writer() -> ApplicationWriter:

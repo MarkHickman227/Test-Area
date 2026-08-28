@@ -3,7 +3,6 @@ from types import SimpleNamespace
 import pytest
 
 from app.services.enrichment import EnrichmentService, _clamp_score, _parse_json_block
-from app.services.job_match import match_job_to_cv
 
 
 def test_parse_json_block_extracts_json():
@@ -51,13 +50,15 @@ async def test_score_job_matches_cv_when_anthropic_is_unavailable():
 
 
 @pytest.mark.asyncio
-async def test_score_job_falls_back_to_cv_match_when_anthropic_returns_empty(monkeypatch):
-    service = EnrichmentService(SimpleNamespace(anthropic_configured=True, anthropic_api_key="x", anthropic_model="m"))
+async def test_score_job_ignores_low_anthropic_numbers(monkeypatch):
+    service = EnrichmentService(
+        SimpleNamespace(anthropic_configured=True, anthropic_api_key="x", anthropic_model="m")
+    )
 
-    async def no_score(prompt):
-        return {}
+    async def low_score(prompt):
+        return {"score": 15, "explanation": "Empty profile"}
 
-    monkeypatch.setattr(service, "_call_anthropic_json", no_score)
+    monkeypatch.setattr(service, "_call_anthropic_json", low_score)
     job = {
         "title": "Solution Architect - Azure Cloud",
         "description": "Azure and enterprise architecture contract.",
@@ -69,6 +70,5 @@ async def test_score_job_falls_back_to_cv_match_when_anthropic_returns_empty(mon
         "contract_delivery_years": 20,
     }
     result = await service.score_job(job, profile, {})
-    expected = match_job_to_cv(job, profile, {})
-    assert result["score"] == expected["score"]
     assert result["score"] >= 60
+    assert result["score"] != 15

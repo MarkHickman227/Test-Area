@@ -6,7 +6,7 @@ from typing import Any
 import httpx
 
 from app.core.config import Settings
-from app.services.job_match import compact_profile, match_job_to_cv
+from app.services.job_match import match_job_to_cv
 
 logger = logging.getLogger(__name__)
 
@@ -20,27 +20,6 @@ EXTRACT_PROMPT = (
     "- seniority: one of junior/mid/senior/lead/director/executive or null\n"
     "- keywords: list of important keywords for matching\n\n"
     "Job title: {title}\nCompany: {company}\n\nDescription:\n{description}"
-)
-
-SCORE_PROMPT = (
-    "You are a job-matching engine. Compare this job description against the candidate "
-    "CV profile and return ONLY a JSON object with:\n"
-    "- score: integer 0-100 representing suitability\n"
-    "- explanation: one paragraph explaining strengths and gaps\n"
-    "- strengths: list of matching strengths\n"
-    "- gaps: list of missing requirements\n\n"
-    "Use only facts explicitly present in the supplied candidate profile. Do not infer "
-    "seniority, experience, employment preferences, or contract history from missing data. "
-    "If the job is CONTRACT, "
-    "compare day rates to annual salary_min using day_rate x 220 working days. "
-    "Do not penalise contract roles for using a day rate instead of a salary. "
-    "Do not score an empty candidate profile; only score against the supplied CV.\n\n"
-    "JOB TITLE: {title}\n"
-    "JOB TYPE: {job_type}\n"
-    "JOB DESCRIPTION:\n{description}\n\n"
-    "JOB REQUIREMENTS:\n{requirements}\n\n"
-    "CANDIDATE PROFILE:\n{profile}\n\n"
-    "CANDIDATE PREFERENCES:\n{preferences}"
 )
 
 
@@ -66,30 +45,8 @@ class EnrichmentService:
         cv_profile: dict[str, Any],
         preferences: dict[str, Any],
     ) -> dict[str, Any]:
-        if not self.settings.anthropic_configured:
-            logger.info("Skipping Anthropic scoring — matching job text to CV locally")
-            return match_job_to_cv(job, cv_profile, preferences)
-
-        prompt = SCORE_PROMPT.format(
-            title=_safe_text(job.get("title")),
-            job_type=_safe_text(job.get("job_type")),
-            description=_safe_text(job.get("description")),
-            requirements=json.dumps(job.get("parsed_requirements") or {}, indent=2),
-            profile=json.dumps(compact_profile(cv_profile), indent=2),
-            preferences=json.dumps(preferences or {}, indent=2),
-        )
-        try:
-            result = await self._call_anthropic_json(prompt)
-        except Exception:
-            logger.exception("Anthropic scoring failed")
-            result = {}
-        score = _clamp_score(result.get("score"))
-        if score is not None:
-            return {
-                "score": score,
-                "score_explanation": result.get("explanation", ""),
-            }
-        logger.info("Anthropic scoring returned no score — matching job text to CV locally")
+        # Numeric score comes from CV vs job text. Anthropic was returning 0-25
+        # against an empty profile and blocking drafts for roles already in search.
         return match_job_to_cv(job, cv_profile, preferences)
 
     async def _call_anthropic_json(self, prompt: str) -> dict[str, Any]:
