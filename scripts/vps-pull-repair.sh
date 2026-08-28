@@ -56,8 +56,8 @@ docker compose up -d --build
 docker compose ps
 
 for _ in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:8000/api/health | grep -q 'cv-backfill-2'; then
-    echo "repair_version is cv-backfill-2"
+  if curl -fsS http://127.0.0.1:8000/api/health | grep -q 'cv-match-1'; then
+    echo "repair_version is cv-match-1"
     break
   fi
   sleep 2

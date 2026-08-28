@@ -111,7 +111,10 @@ class Pipeline:
         stats["scored"] += 1
 
         if score >= SCORE_THRESHOLD:
-            await self._generate_artifacts(repository, job_id, job, stats)
+            try:
+                await self._generate_artifacts(repository, job_id, job, stats)
+            except Exception:
+                logger.exception("Artifact generation failed for job %s", job_id)
 
     async def _generate_artifacts(
         self,
