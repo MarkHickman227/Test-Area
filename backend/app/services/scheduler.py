@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.core.config import Settings, get_settings
-from app.services.pipeline import Pipeline
+from app.services.pipeline import BACKFILL_LIMIT, Pipeline
 from app.services.schedule import next_run_after, seconds_until
 
 logger = logging.getLogger(__name__)
@@ -99,6 +99,24 @@ class DiscoveryScheduler:
 
     async def run_once(self, *, trigger: str = "manual") -> dict[str, Any]:
         """Run one discovery cycle. Concurrent calls are rejected safely."""
+        return await self._guarded_run(
+            trigger=trigger,
+            execute=lambda: self._execute_with_retries(trigger=trigger),
+        )
+
+    async def run_backfill(
+        self,
+        *,
+        trigger: str = "api",
+        limit: int = BACKFILL_LIMIT,
+    ) -> dict[str, Any]:
+        """Score existing NEW jobs without calling discovery."""
+        return await self._guarded_run(
+            trigger=trigger,
+            execute=lambda: self._execute_backfill(trigger=trigger, limit=limit),
+        )
+
+    async def _guarded_run(self, *, trigger: str, execute) -> dict[str, Any]:
         if self._lock.locked() or self._running:
             return {
                 "status": "rejected",
@@ -111,7 +129,7 @@ class DiscoveryScheduler:
             self._last_started_at = datetime.now(timezone.utc)
             self._last_error = None
             try:
-                result = await self._execute_with_retries(trigger=trigger)
+                result = await execute()
                 self._last_status = result["status"]
                 self._last_stats = result.get("stats")
                 if result["status"] == "ok":
@@ -169,6 +187,27 @@ class DiscoveryScheduler:
             "error": str(last_error) if last_error else "unknown_error",
         }
 
+    async def _execute_backfill(self, *, trigger: str, limit: int) -> dict[str, Any]:
+        readiness = self._backfill_readiness_check()
+        if readiness is not None:
+            return {**readiness, "trigger": trigger}
+
+        try:
+            stats = await self._run_backfill(limit=limit)
+        except PreferencesMissingError as exc:
+            return {
+                "status": "skipped",
+                "reason": str(exc),
+                "trigger": trigger,
+            }
+
+        logger.info("Backfill finished trigger=%s stats=%s", trigger, stats)
+        return {
+            "status": "ok",
+            "trigger": trigger,
+            "stats": stats,
+        }
+
     def _readiness_check(self) -> dict[str, Any] | None:
         if not self.settings.perplexity_configured:
             return {
@@ -181,6 +220,21 @@ class DiscoveryScheduler:
             return {
                 "status": "skipped",
                 "reason": "Supabase/database is not configured",
+            }
+        return None
+
+    def _backfill_readiness_check(self) -> dict[str, Any] | None:
+        if not (
+            self.settings.supabase_configured or self.settings.database_configured
+        ):
+            return {
+                "status": "skipped",
+                "reason": "Supabase/database is not configured",
+            }
+        if not self.settings.anthropic_configured:
+            return {
+                "status": "skipped",
+                "reason": "ANTHROPIC_API_KEY is not configured",
             }
         return None
 
@@ -200,6 +254,17 @@ class DiscoveryScheduler:
         )
         pipeline = Pipeline(self.settings)
         return await pipeline.run(repository, preferences)
+
+    async def _run_backfill(self, *, limit: int) -> dict[str, int]:
+        from app.api.deps import get_repository
+
+        repository = get_repository()
+        preferences = await repository.get_preferences()
+        if not preferences:
+            raise PreferencesMissingError("Preferences have not been saved")
+
+        pipeline = Pipeline(self.settings)
+        return await pipeline.backfill(repository, preferences, limit)
 
 
 class PreferencesMissingError(RuntimeError):

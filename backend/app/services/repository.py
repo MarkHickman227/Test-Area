@@ -167,7 +167,7 @@ class SupabaseRepository:
             params={
                 "select": "*",
                 "status": "eq.NEW",
-                "score": "is.null",
+                "or": "(score.is.null,score.lt.60)",
                 "order": "created_at.desc",
                 "limit": str(limit),
             },

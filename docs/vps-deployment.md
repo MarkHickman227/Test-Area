@@ -34,8 +34,17 @@ cd /root/applypilot
 ./scripts/backup-db.sh          # snapshot before changes
 docker compose up -d --build    # never add -v
 docker compose ps
-curl -s http://127.0.0.1:8000/api/health
+curl -s http://127.0.0.1:8000/api/health   # expect repair_version: cv-backfill-2
 curl -s http://127.0.0.1:8000/api/scheduler/status
+```
+
+After this CV/scoring repair is on the VPS:
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/cvs/reparse
+curl -s -X POST http://127.0.0.1:8000/api/pipeline/backfill
+# Repeat backfill until analytics.score_ge_60 and draft_ready move off zero.
+# Never add -v to compose down; that wipes jobs.
 ```
 
 First-time / env setup only:

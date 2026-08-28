@@ -43,6 +43,8 @@ async function loadAnalytics() {
         <div class="stat-card"><span class="stat-number">${data.submitted}</span><span class="stat-label">Submitted</span></div>
         <div class="stat-card"><span class="stat-number">${data.interviews}</span><span class="stat-label">Interviews</span></div>
         <div class="stat-card"><span class="stat-number">${data.offers}</span><span class="stat-label">Offers</span></div>
+        <div class="stat-card"><span class="stat-number">${data.score_ge_60 ?? 0}</span><span class="stat-label">Score 60+</span></div>
+        <div class="stat-card"><span class="stat-number">${data.draft_ready ?? 0}</span><span class="stat-label">Draft / Ready</span></div>
       </div>
       <h3>Job type mix (all jobs)</h3>
       <table class="analytics-table"><thead><tr><th>Type</th><th>Count</th></tr></thead><tbody>${typeRows}</tbody></table>

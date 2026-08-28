@@ -38,7 +38,8 @@ class FakePipelineRepository:
         for job in self.jobs.values():
             if job.get("status") != "NEW":
                 continue
-            if job.get("score") is not None:
+            score = job.get("score")
+            if score is not None and int(score) >= 60:
                 continue
             pending.append(job)
         return pending[:limit]
@@ -179,14 +180,14 @@ async def test_pipeline_backfills_existing_new_jobs():
 
 
 @pytest.mark.asyncio
-async def test_pipeline_does_not_rescore_existing_low_score():
+async def test_pipeline_rescores_existing_low_score():
     existing = {
         "id": JOB_ID,
-        "title": "Unrelated role",
+        "title": "Enterprise Architect",
         "job_type": "PERM",
         "status": "NEW",
-        "score": 30,
-        "source_url": "https://example.com/already-scored",
+        "score": 25,
+        "source_url": "https://example.com/already-scored-wrong",
     }
     pipeline = _pipeline(discovery=FakeDiscoveryService(jobs=[]))
     repo = FakePipelineRepository(existing_jobs=[existing])
@@ -194,6 +195,31 @@ async def test_pipeline_does_not_rescore_existing_low_score():
 
     stats = await pipeline.run(repo, prefs)
 
-    assert stats["processed"] == 0
-    assert stats["scored"] == 0
-    assert repo.updated_fields == {}
+    assert stats["processed"] == 1
+    assert stats["scored"] == 1
+    assert stats["generated"] == 1
+    assert repo.updated_fields[JOB_ID]["score"] == 85
+
+
+@pytest.mark.asyncio
+async def test_pipeline_backfill_skips_discovery():
+    existing = {
+        "id": JOB_ID,
+        "title": "Solutions Architect",
+        "job_type": "CONTRACT",
+        "status": "NEW",
+        "score": 15,
+        "source_url": "https://example.com/contract",
+    }
+    discovery = FakeDiscoveryService(jobs=[{"title": "should not be used"}])
+    pipeline = _pipeline(discovery=discovery)
+    repo = FakePipelineRepository(existing_jobs=[existing])
+    prefs = Preferences(target_titles=["EA"], locations=["London"])
+
+    stats = await pipeline.backfill(repo, prefs)
+
+    assert stats["discovered"] == 0
+    assert stats["inserted"] == 0
+    assert stats["processed"] == 1
+    assert stats["scored"] == 1
+    assert repo.updated_fields[JOB_ID]["score"] == 85

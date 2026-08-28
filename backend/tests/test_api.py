@@ -139,13 +139,22 @@ def test_health_reports_configuration_state():
     assert "supabase_configured" in body
     assert body["discovery_schedule_mode"] == "twice_daily"
     assert body["discovery_times"] == ["08:00", "20:00"]
-    assert body["repair_version"] == "cv-backfill-1"
+    assert body["repair_version"] == "cv-backfill-2"
 
 
 def test_pipeline_run_skips_without_credentials():
     client, _ = make_client()
 
     response = client.post("/api/pipeline/run")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "skipped"
+
+
+def test_pipeline_backfill_skips_without_credentials():
+    client, _ = make_client()
+
+    response = client.post("/api/pipeline/backfill")
 
     assert response.status_code == 200
     assert response.json()["status"] == "skipped"
@@ -191,6 +200,10 @@ def test_analytics_returns_status_counts():
     assert data["status_counts"]["DRAFT"] == 1
     assert data["job_type_counts"]["PERM"] == 1
     assert data["submitted_by_type"] == {}
+    assert data["score_ge_60"] == 1
+    assert data["draft_ready"] == 1
+    assert data["max_score"] == 86
+    assert data["unscored"] == 0
 
 
 def test_preferences_can_be_saved():

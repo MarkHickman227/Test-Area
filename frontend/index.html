@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ApplyPilot</title>
-    <link rel="stylesheet" href="/styles.css?v=metrics1" />
+    <link rel="stylesheet" href="/styles.css?v=cv2" />
   </head>
   <body>
     <header class="app-header">
@@ -41,6 +41,14 @@
         <button type="button" class="metric-tile" data-filter-status="NEW" data-filter-type="">
           <span class="metric-label">New</span>
           <span class="metric-value" id="count-new">0</span>
+        </button>
+        <button type="button" class="metric-tile" data-filter-status="DRAFT" data-filter-type="">
+          <span class="metric-label">Drafts</span>
+          <span class="metric-value" id="count-draft">0</span>
+        </button>
+        <button type="button" class="metric-tile" data-filter-min-score="60" data-filter-status="" data-filter-type="">
+          <span class="metric-label">Score 60+</span>
+          <span class="metric-value" id="count-score60">0</span>
         </button>
         <button type="button" class="metric-tile" data-filter-status="INTERVIEW" data-filter-type="">
           <span class="metric-label">Interviews</span>
@@ -93,7 +101,7 @@
       </section>
     </main>
 
-    <script src="/app.js?v=cv1"></script>
-    <script src="/extras.js?v=cv1"></script>
+    <script src="/app.js?v=cv2"></script>
+    <script src="/extras.js?v=cv2"></script>
   </body>
 </html>
