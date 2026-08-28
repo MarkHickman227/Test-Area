@@ -128,6 +128,16 @@ def make_client():
 
 
 
+def test_root_serves_dashboard():
+    client, _ = make_client()
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "ApplyPilot" in response.text
+    assert "Job application review dashboard" in response.text
+
+
 def test_health_reports_configuration_state():
     client, _ = make_client()
 

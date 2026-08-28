@@ -4,6 +4,7 @@ let activeTab = "cover_letter";
 let notice = "";
 let allJobs = [];
 let activeStatus = "";
+let activeType = "";
 let activeMinScore = "";
 
 const fields = {
