@@ -140,7 +140,7 @@ def test_empty_stored_profile_still_matches_live_azure_job_from_cv_text():
     result = match_job_to_cv(AZURE_FS_CONTRACT, profile, AZURE_FS_PREFS)
     assert profile is not None
     assert "Azure" in profile["skills"]
-    assert "raw_text" not in profile
+    assert "raw_text" in profile
     assert "financial services" in profile["domains"]
     assert result["score"] >= 60
     assert result["score"] != 15
@@ -174,6 +174,26 @@ def test_match_treats_typical_search_listing_as_apply_ready():
     }
     result = match_job_to_cv(job, CV, {"target_titles": ["Solutions Architect"], "locations": ["London"]})
     assert result["score"] >= 60
+
+
+def test_match_compares_job_to_full_cv_text_not_skill_list_only():
+    cv_profile = {
+        "skills": [],
+        "roles": [],
+        "domains": [],
+        "summary": "Short heading.",
+        "raw_text": (
+            "Mark Hickman\nProfessional Profile\n"
+            "Enterprise Architecture Leader with Azure, AWS, TOGAF and Prince2. "
+            "Over 20 years of contract delivery including VW Financial Services "
+            "and University of Greenwich.\n"
+            "Professional Experience\nEnterprise Architect\nSolutions Architect\n"
+        ),
+    }
+    result = match_job_to_cv(AZURE_FS_CONTRACT, cv_profile, AZURE_FS_PREFS)
+    assert result["score"] >= 60
+    assert "full uploaded CV" in result["score_explanation"]
+    assert any("azure" in str(item).lower() for item in result["strengths"])
 
 
 def test_match_without_cv_does_not_invent_a_score():

@@ -135,7 +135,7 @@ def test_root_serves_dashboard():
 
     assert response.status_code == 200
     assert "ApplyPilot" in response.text
-    assert "Job application review dashboard" in response.text
+    assert "Job application dashboard" in response.text
 
 
 def test_health_reports_configuration_state():
@@ -149,7 +149,9 @@ def test_health_reports_configuration_state():
     assert "supabase_configured" in body
     assert body["discovery_schedule_mode"] == "twice_daily"
     assert body["discovery_times"] == ["08:00", "20:00"]
-    assert body["repair_version"] == "cv-match-4"
+    assert body["repair_version"] == "cv-full-1"
+    assert body["auto_apply"] is True
+    assert body["full_cv_scoring"] is True
 
 
 def test_pipeline_run_skips_without_credentials():

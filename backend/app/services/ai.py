@@ -24,22 +24,35 @@ class ApplicationWriter:
         prompt = self._build_prompt(job, artifact, notes)
         return await self._call_anthropic(prompt)
 
-    async def generate_artifacts(self, job: dict[str, Any]) -> dict[str, Any]:
-        if not self.settings.anthropic_configured:
-            logger.info("Skipping artifact generation — ANTHROPIC_API_KEY not set")
-            return {}
-
+    async def generate_artifacts(
+        self,
+        job: dict[str, Any],
+        cv_profile: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         artifacts: dict[str, Any] = {}
-        for artifact_type in ("cover_letter", "cv_summary", "screening_answers"):
-            prompt = self._build_pipeline_prompt(job, artifact_type)
-            content = await self._call_anthropic(prompt)
-            if content:
-                artifacts[artifact_type] = content
-        if job.get("agency"):
-            prompt = self._build_pipeline_prompt(job, "recruiter_outreach")
-            content = await self._call_anthropic(prompt)
-            if content:
-                artifacts["recruiter_outreach"] = content
+        if self.settings.anthropic_configured:
+            for artifact_type in ("cover_letter", "cv_summary", "screening_answers"):
+                prompt = self._build_pipeline_prompt(job, artifact_type, cv_profile)
+                try:
+                    content = await self._call_anthropic(prompt)
+                except Exception:
+                    logger.exception("Artifact generation failed for %s", artifact_type)
+                    continue
+                if content:
+                    artifacts[artifact_type] = content
+            if job.get("agency"):
+                prompt = self._build_pipeline_prompt(job, "recruiter_outreach", cv_profile)
+                try:
+                    content = await self._call_anthropic(prompt)
+                except Exception:
+                    logger.exception("Recruiter outreach generation failed")
+                    content = ""
+                if content:
+                    artifacts["recruiter_outreach"] = content
+        if not artifacts.get("cover_letter"):
+            from app.services.apply import build_application_pack
+
+            artifacts.update(build_application_pack(job, cv_profile))
         return artifacts
 
     async def _call_anthropic(self, prompt: str) -> str:
@@ -83,18 +96,25 @@ class ApplicationWriter:
         )
 
     @staticmethod
-    def _build_pipeline_prompt(job: dict[str, Any], artifact: str) -> str:
+    def _build_pipeline_prompt(
+        job: dict[str, Any],
+        artifact: str,
+        cv_profile: dict[str, Any] | None = None,
+    ) -> str:
         guidance = _ARTIFACT_GUIDANCE[artifact]
+        profile = cv_profile or {}
+        cv_text = (profile.get("raw_text") or profile.get("summary") or "")[:12000]
         return (
             f"{guidance}\n\n"
-            "Keep claims grounded in the job details. "
+            "Keep every claim grounded in the full uploaded CV. "
             "Do not invent experience or credentials.\n\n"
             f"Job title: {job.get('title', 'Unknown')}\n"
             f"Company: {job.get('company') or 'Unknown'}\n"
             f"Location: {job.get('location') or 'Unknown'}\n"
             f"Score explanation: {job.get('score_explanation') or 'Not available'}\n"
             f"Parsed requirements: {job.get('parsed_requirements', {})}\n"
-            f"Job description:\n{job.get('description') or 'Not available'}"
+            f"Job description:\n{job.get('description') or 'Not available'}\n\n"
+            f"Full uploaded CV:\n{cv_text or 'Not available'}"
         )
 
 

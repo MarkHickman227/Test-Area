@@ -44,10 +44,22 @@ def match_job_to_cv(
         }
 
     job_text = _job_text(job)
+    cv_text = _cv_text(cv_profile)
+    raw_len = len((cv_profile.get("raw_text") or "").strip())
+    cv_chars = raw_len or len(cv_text.strip())
+    if not cv_text.strip():
+        return {
+            "score": None,
+            "score_explanation": "The uploaded CV is empty, so this job was not scored.",
+        }
+
     skills = [str(s) for s in (cv_profile.get("skills") or []) if str(s).strip()]
     domains = [str(d) for d in (cv_profile.get("domains") or []) if str(d).strip()]
     cv_roles = [str(r) for r in (cv_profile.get("roles") or []) if str(r).strip()]
     matched_skills = [s for s in skills if _term_in_text(s, job_text)]
+    for term in _wanted_terms(job):
+        if _term_in_text(term, cv_text) and not any(term.lower() == s.lower() for s in matched_skills):
+            matched_skills.append(term)
     matched_domains = [d for d in domains if _term_in_text(d, job_text)]
     matched_cv_roles = [r for r in cv_roles if _term_in_text(r, job_text)]
     role_hits = matched_cv_roles or [role for role in _ROLE_TERMS if _term_in_text(role, job_text)]
@@ -72,8 +84,10 @@ def match_job_to_cv(
         score = min(score, 32)
     score = max(0, min(100, score))
 
-    gaps = _gaps(job, matched_skills)
-    explanation = _explanation(job, matched_skills, matched_domains, role_hits, score, gaps)
+    gaps = _gaps(job, cv_text)
+    explanation = _explanation(
+        job, matched_skills, matched_domains, role_hits, score, gaps, cv_chars
+    )
     return {
         "score": score,
         "score_explanation": explanation,
@@ -150,15 +164,33 @@ def _preference_bonus(
     return min(12, bonus)
 
 
-def _gaps(job: dict[str, Any], matched_skills: list[str]) -> list[str]:
+def _cv_text(cv_profile: dict[str, Any]) -> str:
+    parts = [
+        cv_profile.get("raw_text") or "",
+        cv_profile.get("summary") or "",
+        " ".join(str(s) for s in (cv_profile.get("skills") or [])),
+        " ".join(str(r) for r in (cv_profile.get("roles") or [])),
+        " ".join(str(d) for d in (cv_profile.get("domains") or [])),
+        " ".join(str(c) for c in (cv_profile.get("certifications") or [])),
+    ]
+    return " ".join(parts).lower()
+
+
+def _wanted_terms(job: dict[str, Any]) -> list[str]:
     required = job.get("parsed_requirements") or {}
-    wanted = [str(s) for s in (required.get("required_skills") or []) if str(s).strip()]
-    matched_lower = {s.lower() for s in matched_skills}
+    terms: list[str] = []
+    for key in ("required_skills", "keywords"):
+        for item in required.get(key) or []:
+            value = str(item).strip()
+            if value:
+                terms.append(value)
+    return terms
+
+
+def _gaps(job: dict[str, Any], cv_text: str) -> list[str]:
     gaps = []
-    for skill in wanted:
-        if skill.lower() in matched_lower:
-            continue
-        if not any(part in skill.lower() for part in matched_lower if len(part) > 4):
+    for skill in _wanted_terms(job):
+        if not _term_in_text(skill, cv_text):
             gaps.append(skill)
     return gaps
 
@@ -170,21 +202,20 @@ def _explanation(
     role_hits: list[str],
     score: int,
     gaps: list[str],
+    cv_chars: int,
 ) -> str:
     title = job.get("title") or "This role"
     bits = [
-        f"{title} scored {score}/100 against the uploaded CV. "
-        "This listing is in the current search, so it is treated as apply-ready "
-        "unless the title is clearly unrelated."
+        f"{title} scored {score}/100 against the full uploaded CV ({cv_chars} characters)."
     ]
     if role_hits:
-        bits.append("Parsed CV roles that overlap the listing: " + ", ".join(role_hits[:4]) + ".")
+        bits.append("CV roles that overlap the listing: " + ", ".join(role_hits[:4]) + ".")
     if matched_skills:
-        bits.append("Parsed CV skills named in the job: " + ", ".join(matched_skills[:8]) + ".")
+        bits.append("Evidence in the full CV: " + ", ".join(matched_skills[:8]) + ".")
     else:
-        bits.append("No parsed CV skills were named in the job description.")
+        bits.append("The full CV does not name the skills listed in this job.")
     if matched_domains:
         bits.append("Domain overlap: " + ", ".join(matched_domains[:4]) + ".")
     if gaps:
-        bits.append("Requirements not named on the CV: " + ", ".join(gaps[:4]) + ".")
+        bits.append("Requirements not found in the CV: " + ", ".join(gaps[:4]) + ".")
     return " ".join(bits)

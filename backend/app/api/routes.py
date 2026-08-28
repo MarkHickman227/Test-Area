@@ -21,7 +21,7 @@ from app.services.scheduler import DiscoveryScheduler
 router = APIRouter(prefix="/api")
 
 Repo = Annotated[Any, Depends(get_repository)]
-REPAIR_VERSION = "cv-match-4"
+REPAIR_VERSION = "cv-full-1"
 
 
 def get_writer() -> ApplicationWriter:
@@ -87,6 +87,9 @@ async def health(
             and settings.anthropic_configured
         ),
         "repair_version": REPAIR_VERSION,
+        "auto_apply": settings.auto_apply,
+        "smtp_configured": getattr(settings, "smtp_configured", False),
+        "full_cv_scoring": True,
     }
     if scheduler is not None:
         payload["scheduler"] = scheduler.status()

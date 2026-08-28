@@ -76,7 +76,8 @@ def test_profile_for_scoring_replaces_empty_stored_profile():
     assert is_complete_profile(profile)
     assert "Azure" in profile["skills"]
     assert "Enterprise Architect" in profile["roles"]
-    assert "raw_text" not in profile
+    assert "raw_text" in profile
+    assert "Azure" in profile["raw_text"]
 
 
 def test_profile_for_scoring_rejects_empty_cv():

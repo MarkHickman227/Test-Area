@@ -231,11 +231,6 @@ class DiscoveryScheduler:
                 "status": "skipped",
                 "reason": "Supabase/database is not configured",
             }
-        if not self.settings.anthropic_configured:
-            return {
-                "status": "skipped",
-                "reason": "ANTHROPIC_API_KEY is not configured",
-            }
         return None
 
     async def _run_pipeline(self) -> dict[str, int]:

@@ -120,11 +120,12 @@ def profile_for_scoring(cv: dict[str, Any] | None) -> dict[str, Any] | None:
     raw = (cv.get("raw_text") or "").strip()
     stored = dict(cv.get("parsed_profile") or {})
     parsed = parse_cv_profile(raw) if raw else {}
-    if is_complete_profile(parsed):
-        return parsed
-    if is_complete_profile(stored):
-        return stored
-    return None
+    profile = parsed if is_complete_profile(parsed) else stored
+    if not is_complete_profile(profile):
+        return None
+    if raw:
+        profile["raw_text"] = raw[:20000]
+    return profile
 
 
 def _roles(text: str) -> list[str]:

@@ -4,9 +4,11 @@ from typing import Any
 from app.core.config import Settings
 from app.models import Preferences
 from app.services.ai import ApplicationWriter
+from app.services.apply import auto_apply, build_application_pack
 from app.services.cv_parser import profile_for_scoring
 from app.services.discovery import DiscoveryService
 from app.services.enrichment import EnrichmentService
+from app.services.job_match import compact_profile
 from app.services.repository import SupabaseRepository
 
 logger = logging.getLogger(__name__)
@@ -58,7 +60,7 @@ class Pipeline:
         cv_row = await repository.get_best_cv()
         cv_profile = profile_for_scoring(cv_row)
         if cv_row and cv_profile:
-            await repository.update_cv_profile(cv_row["id"], cv_profile)
+            await repository.update_cv_profile(cv_row["id"], compact_profile(cv_profile))
         if not cv_profile:
             logger.warning("No usable CV loaded — scoring and artifact generation will be skipped")
 
@@ -115,28 +117,48 @@ class Pipeline:
 
         if score >= SCORE_THRESHOLD:
             try:
-                await self._generate_artifacts(repository, job_id, job, stats)
+                await self._generate_and_apply(
+                    repository, job_id, job, cv_profile, stats
+                )
             except Exception:
-                logger.exception("Artifact generation failed for job %s", job_id)
+                logger.exception("Application failed for job %s", job_id)
 
-    async def _generate_artifacts(
+    async def _generate_and_apply(
         self,
         repository: SupabaseRepository,
         job_id: str,
         job: dict[str, Any],
+        cv_profile: dict[str, Any] | None,
         stats: dict[str, int],
     ) -> None:
-        artifacts = await self.writer.generate_artifacts(job)
+        artifacts = await self.writer.generate_artifacts(job, cv_profile)
+        if not artifacts.get("cover_letter"):
+            artifacts.update(build_application_pack(job, cv_profile))
         for artifact_type, content in artifacts.items():
             if artifact_type == "recruiter_outreach":
                 await repository.insert_recruiter_outreach(job_id, content)
             else:
                 await repository.insert_artifact(job_id, artifact_type, content)
 
-        if artifacts:
-            await repository.update_job_fields(job_id, {"status": "DRAFT"})
-            stats["generated"] += 1
-            logger.info("Generated %d artifacts for job %s", len(artifacts), job.get("title"))
+        if not artifacts:
+            return
+
+        stats["generated"] += 1
+        auto_apply_on = getattr(self.settings, "auto_apply", True)
+        if auto_apply_on:
+            result = await auto_apply(job, artifacts, cv_profile, self.settings)
+            await repository.update_job_fields(
+                job_id,
+                {"status": "SUBMITTED", "submitted_at": _now()},
+            )
+            stats["applied"] += 1
+            logger.info(
+                "Applied to %s via %s", job.get("title"), result.get("channel")
+            )
+            return
+
+        await repository.update_job_fields(job_id, {"status": "DRAFT"})
+        logger.info("Generated %d artifacts for job %s", len(artifacts), job.get("title"))
 
 
 def _empty_stats() -> dict[str, int]:
@@ -147,5 +169,12 @@ def _empty_stats() -> dict[str, int]:
         "enriched": 0,
         "scored": 0,
         "generated": 0,
+        "applied": 0,
         "skipped_no_cv": 0,
     }
+
+
+def _now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat()

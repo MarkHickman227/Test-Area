@@ -1,8 +1,8 @@
 # ApplyPilot
 
-ApplyPilot is an AI-assisted job application review workspace. It searches for jobs, stores the enriched opportunities in Supabase, scores each job against your CV, and prepares application artifacts for human review.
+ApplyPilot is an AI job application agent. It searches for jobs, scores each listing against your **full uploaded CV**, writes the application pack, and **applies automatically** for roles that score 60+.
 
-ApplyPilot never submits applications automatically. The dashboard is the final review step before you copy, edit, and submit anything yourself.
+When a listing includes a contact email and SMTP is configured, ApplyPilot emails the cover letter and CV. Otherwise it stores the completed application as Submitted against that listing URL. It does not invent CV experience.
 
 ## What is included
 

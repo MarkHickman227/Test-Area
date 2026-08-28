@@ -2,9 +2,9 @@
 
 Version 1.0 | Avalon Creative Ltd | 28/05/2026
 
-ApplyPilot is an AI job application agent that runs on your own server. It finds jobs, scores them against your CV, and generates tailored cover letters, CV summaries, screening answers, and recruiter notes for your review.
+ApplyPilot is an AI job application agent that runs on your own server. It finds jobs, scores them against your **full uploaded CV**, writes the application, and applies automatically for roles that score 60 or above.
 
-ApplyPilot does not submit applications automatically. You stay in control of every submission.
+When SMTP is configured and the listing has a contact email, ApplyPilot emails the cover letter plus CV. Listings without a contact are stored as Submitted with the application pack and source URL.
 
 ## What ApplyPilot does
 
@@ -13,9 +13,8 @@ ApplyPilot does not submit applications automatically. You stay in control of ev
 | Discover | Searches on your schedule using your titles, locations, salary, and perm/contract preference. | None |
 | Enrich | Reads each job description and extracts skills, requirements, seniority, and keywords. | None |
 | Score | Gives each job a 0-100 suitability score vs your CV, with strengths and gaps. | None |
-| Generate | Writes a tailored cover letter, CV summary, and screening answers. | None |
-| Recruiter | Detects agency roles and drafts a personalised recruiter outreach email. | None |
-| Review | Surfaces everything in your dashboard for editing and approval. | You review, edit, and submit |
+| Generate | Writes a tailored cover letter and CV summary from the full CV. | None |
+| Apply | Marks matching jobs Submitted and emails the contact when SMTP is set. | Review in the dashboard |
 
 ## Setup
 
