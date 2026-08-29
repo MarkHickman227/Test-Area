@@ -9,6 +9,10 @@ if [[ "${DATABASE_URL:-}" == postgresql* ]]; then
   pg_dump "$DATABASE_URL" | gzip > "$DEST/postgres.sql.gz"
 else
   sqlite_path="${DATABASE_URL#sqlite+pysqlite:///}"
+  sqlite_path="${sqlite_path#sqlite:///}"
+  if [[ -n "$sqlite_path" && "$sqlite_path" != /* ]]; then
+    sqlite_path="$ROOT/${sqlite_path#./}"
+  fi
   if [[ -f "$sqlite_path" ]]; then
     gzip -c "$sqlite_path" > "$DEST/sqlite.db.gz"
   fi
