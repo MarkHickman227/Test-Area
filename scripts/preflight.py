@@ -8,6 +8,7 @@ import http.cookiejar
 import json
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from uuid import uuid4
 
@@ -169,18 +170,56 @@ class Preflight:
             f"checkout should stay disabled, got {pay_status} {pay}",
         )
 
+    def check_support(self, email: str, password: str, query: str) -> None:
+        status, body = self.request(
+            "POST", "/v1/auth/login", {"email": email, "password": password}
+        )
+        self.expect(status == 200, f"support login failed: {status} {body}")
+        if status != 200:
+            return
+        found_status, found = self.request(
+            "GET",
+            "/v1/admin/support/users?q=" + urllib.parse.quote(query),
+        )
+        self.expect(found_status == 200, f"support search -> {found_status} {found}")
+        rows = found if isinstance(found, list) else []
+        self.expect(len(rows) >= 1, f"support search returned no rows for q={query}")
+        if rows:
+            self.expect(
+                rows[0].get("outputs_visible") is False,
+                f"support search must hide outputs, got {rows[0]}",
+            )
+            self.expect(
+                "url" not in rows[0] and "outputs" not in rows[0],
+                f"support search leaked output fields: {rows[0]}",
+            )
+        queue_status, queue = self.request("GET", "/v1/admin/queue")
+        self.expect(
+            queue_status == 403,
+            f"support must not open the moderation queue, got {queue_status} {queue}",
+        )
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", default="http://127.0.0.1:8000")
     parser.add_argument("--email", default="")
     parser.add_argument("--password", default="")
+    parser.add_argument("--support-email", default="")
+    parser.add_argument("--support-password", default="")
+    parser.add_argument("--support-query", default="adult")
     parser.add_argument("--expect-staging", action="store_true")
     args = parser.parse_args()
     run = Preflight(args.base)
     run.check_public(args.expect_staging)
     if args.email and args.password:
         run.check_authenticated(args.email, args.password)
+    if args.support_email and args.support_password:
+        support = Preflight(args.base)
+        support.check_support(
+            args.support_email, args.support_password, args.support_query
+        )
+        run.failures.extend(support.failures)
     if run.failures:
         print("preflight FAILED")
         for item in run.failures:
