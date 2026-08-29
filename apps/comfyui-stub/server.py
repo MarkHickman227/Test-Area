@@ -11,7 +11,7 @@ import uuid
 
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse, Response
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 app = FastAPI(title="PrivateCanvas ComfyUI stub", docs_url=None, redoc_url=None)
 _JOBS: dict[str, dict] = {}
@@ -37,16 +37,24 @@ def _latent_size(prompt: dict) -> tuple[int, int, int]:
 
 
 def _placeholder_png(label: str, width: int = 256, height: int = 256) -> bytes:
-    image = Image.new("RGB", (width, height), (28, 24, 22))
+    image = Image.new("RGB", (width, height), (58, 48, 38))
     draw = ImageDraw.Draw(image)
-    inset = max(8, min(width, height) // 24)
+    inset = max(10, min(width, height) // 16)
     draw.rectangle(
         [inset, inset, width - inset, height - inset],
-        outline=(196, 165, 116),
-        width=3,
+        outline=(212, 176, 118),
+        width=max(4, min(width, height) // 48),
     )
-    draw.text((inset + 12, height // 3), "ComfyUI stub", fill=(243, 239, 232))
-    draw.text((inset + 12, height // 3 + 22), label[:36], fill=(196, 165, 116))
+    try:
+        title = ImageFont.load_default(size=max(28, min(width, height) // 10))
+        body = ImageFont.load_default(size=max(18, min(width, height) // 16))
+    except TypeError:
+        title = ImageFont.load_default()
+        body = title
+    text_x = inset + max(12, width // 20)
+    text_y = height // 3
+    draw.text((text_x, text_y), "ComfyUI stub", fill=(243, 239, 232), font=title)
+    draw.text((text_x, text_y + max(36, height // 14)), label[:36], fill=(212, 176, 118), font=body)
     buf = io.BytesIO()
     image.save(buf, format="PNG")
     return buf.getvalue()
