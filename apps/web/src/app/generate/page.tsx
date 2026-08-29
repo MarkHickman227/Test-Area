@@ -124,12 +124,24 @@ export default function GeneratePage() {
   return (
     <div className="grid grid-2">
       <form className="card" onSubmit={onSubmit}>
-        <p className="kicker">{backend === "comfyui" ? "ComfyUI workspace" : "Generation workspace"}</p>
+        <p className="kicker">
+          {backend === "comfyui"
+            ? "ComfyUI workspace"
+            : backend === "hotapi"
+              ? "HotAPI workspace"
+              : "Generation workspace"}
+        </p>
         <h1>Compose a private image</h1>
         {backend === "comfyui" ? (
           <p className="muted">
             Generation runs through a private ComfyUI worker and a pinned workflow. There is no graph editor
             and you cannot upload models or custom nodes.
+          </p>
+        ) : null}
+        {backend === "hotapi" ? (
+          <p className="muted">
+            Generation runs through HotAPI text-to-image on the server. The API key stays in HOTAPI_KEY.
+            Face swap, image edit, and video are not available.
           </p>
         ) : null}
         <label>Model profile</label>
@@ -239,7 +251,13 @@ export default function GeneratePage() {
           <p className="muted">
             Submit a prompt to see live job status and the resulting image here.
             History also lives in your private library.
-            Backend: {backend === "comfyui" ? "ComfyUI (pinned workflow)" : "mock placeholders"}.
+            Backend:{" "}
+            {backend === "comfyui"
+              ? "ComfyUI (pinned workflow)"
+              : backend === "hotapi"
+                ? "HotAPI text-to-image"
+                : "mock placeholders"}
+            .
           </p>
         )}
         <p style={{ marginTop: "1.5rem" }}>

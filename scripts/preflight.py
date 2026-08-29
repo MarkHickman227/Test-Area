@@ -85,8 +85,8 @@ class Preflight:
             )
         else:
             self.expect(
-                backend in {"mock", "comfyui"},
-                f"generation_backend should be mock or comfyui, got {backend}",
+                backend in {"mock", "comfyui", "hotapi"},
+                f"generation_backend should be mock, comfyui, or hotapi, got {backend}",
             )
         self.expect(
             meta.get("payment_provider") == "none",

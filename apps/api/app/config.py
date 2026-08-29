@@ -49,9 +49,12 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_api_base: str = "https://api.stripe.com"
-    generation_backend: Literal["mock", "comfyui"] = "mock"
+    generation_backend: Literal["mock", "comfyui", "hotapi"] = "mock"
     comfyui_url: str = "http://comfyui:8188"
     comfyui_timeout_seconds: int = 120
+    hotapi_key: str = ""
+    hotapi_base_url: str = "https://api.hotapi.ai"
+    hotapi_timeout_seconds: int = 180
     job_execution: Literal["inline", "celery"] = "inline"
     require_mfa_privileged: bool = True
     allow_dev_mfa_bypass: bool = True

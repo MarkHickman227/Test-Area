@@ -126,6 +126,7 @@ class JobService:
             "resolution": resolution,
             "image_count": image_count,
             "seed": seed,
+            "quality": payload.get("quality") or "medium",
             "preset": (
                 preset.values
                 if preset

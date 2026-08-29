@@ -56,3 +56,18 @@ class CancelResponse(APIModel):
 
 class RerunRequest(APIModel):
     idempotency_key: str
+
+
+class GenerateImageRequest(APIModel):
+    prompt: str = Field(min_length=1, max_length=4000)
+    size: str = "1024x1024"
+    quality: str = "medium"
+
+
+class GenerateImageResponse(APIModel):
+    job_id: str
+    status: str
+    worker_id: str | None = None
+    output_ids: list[str] = []
+    image_url: str | None = None
+    image: str | None = None

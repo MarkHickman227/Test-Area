@@ -48,6 +48,8 @@ Open the UI at http://127.0.0.1:3000/ (not port 8000). Port 8000 is the API (`/h
 
 To generate through ComfyUI from that same UI (pinned workflow, no ComfyUI graph editor): run `python apps/comfyui-stub/server.py` on loopback, then start the API with `GENERATION_BACKEND=comfyui` and `COMFYUI_URL=http://127.0.0.1:8188`. See `docs/COMFYUI.md`.
 
+To generate through HotAPI (server-side `HOTAPI_KEY` only): `GENERATION_BACKEND=hotapi`. See `docs/HOTAPI.md`. Staging still requires mock.
+
 Dev accounts (non-production): `adult@example.com` / `dev-user-password` and `admin@example.com` / `dev-admin-password`.
 
 ## Tests
