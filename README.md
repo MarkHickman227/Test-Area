@@ -35,7 +35,7 @@ export REQUIRE_MFA_PRIVILEGED=false
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 # set ENCRYPTION_KEY to that value
 mkdir -p data
-cd apps/api && uvicorn app.main:app --reload --port 8000
+cd apps/api && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 In another shell:
@@ -44,7 +44,7 @@ In another shell:
 cd apps/web && npm install && npm run dev
 ```
 
-Open http://localhost:3000. The web app proxies `/v1` to the API.
+Open the UI at http://127.0.0.1:3000/ (not port 8000). Port 8000 is the API (`/health`, `/ready`). Bind `0.0.0.0` so `localhost` and the preview proxy can reach it; `127.0.0.1` only is IPv4-loopback and looks like a connection reset in the browser.
 
 Dev accounts (non-production): `adult@example.com` / `dev-user-password` and `admin@example.com` / `dev-admin-password`.
 

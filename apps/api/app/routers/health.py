@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Response
+from fastapi.responses import HTMLResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from sqlalchemy import text
 
@@ -19,6 +20,17 @@ CREDIT_EVENTS = Counter(
     "pc_credit_events_total", "Credit ledger events", ["event_type"]
 )
 LATENCY = Histogram("pc_http_request_latency_seconds", "Request latency")
+
+
+@router.get("/", response_class=HTMLResponse)
+def root():
+    return (
+        "<!doctype html><html><head><meta charset='utf-8'><title>PrivateCanvas API</title></head>"
+        "<body><p>This is the API, not the website.</p>"
+        "<ul><li><a href='/health'>/health</a></li><li><a href='/ready'>/ready</a></li>"
+        "<li><a href='/v1/meta/launch'>/v1/meta/launch</a></li></ul>"
+        "<p>Open the UI on port 3000 (for example http://127.0.0.1:3000/).</p></body></html>"
+    )
 
 
 @router.get("/health")

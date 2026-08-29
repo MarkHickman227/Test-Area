@@ -104,3 +104,11 @@ def test_ready_ok(client):
     res = client.get("/ready")
     assert res.status_code == 200
     assert res.json()["status"] == "ready"
+
+
+def test_root_explains_api_not_website(client):
+    res = client.get("/")
+    assert res.status_code == 200
+    assert "text/html" in res.headers["content-type"]
+    assert "This is the API" in res.text
+    assert "/health" in res.text
