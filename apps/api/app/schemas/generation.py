@@ -45,6 +45,7 @@ class GenerationJobView(APIModel):
     parameters: dict
     created_at: datetime
     failure_code: str | None = None
+    worker_id: str | None = None
 
 
 class CancelResponse(APIModel):

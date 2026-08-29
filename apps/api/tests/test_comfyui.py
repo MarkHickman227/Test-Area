@@ -194,6 +194,7 @@ def test_comfyui_backend_completes_inline_job(client, monkeypatch):
     )
     assert res.status_code == 200, res.text
     assert res.json()["status"] == "COMPLETED"
+    assert res.json()["worker_id"] == "comfyui-worker-1"
     from app.db import get_session_factory
 
     db = get_session_factory()()

@@ -46,6 +46,8 @@ cd apps/web && npm install && npm run dev
 
 Open the UI at http://127.0.0.1:3000/ (not port 8000). Port 8000 is the API (`/health`, `/ready`). Bind `0.0.0.0` so `localhost` and the preview proxy can reach it; `127.0.0.1` only is IPv4-loopback and looks like a connection reset in the browser.
 
+To generate through ComfyUI from that same UI (pinned workflow, no ComfyUI graph editor): run `python apps/comfyui-stub/server.py` on loopback, then start the API with `GENERATION_BACKEND=comfyui` and `COMFYUI_URL=http://127.0.0.1:8188`. See `docs/COMFYUI.md`.
+
 Dev accounts (non-production): `adult@example.com` / `dev-user-password` and `admin@example.com` / `dev-admin-password`.
 
 ## Tests

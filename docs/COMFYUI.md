@@ -18,6 +18,20 @@ A GPU worker must:
 
 ## Local stub (no GPU, no weights)
 
+The product UI stays PrivateCanvas (`http://127.0.0.1:3000/generate`). Do not open ComfyUI's own frontend. Users never submit graphs.
+
+Without Docker:
+
+```bash
+# loopback only — do not publish 8188
+python apps/comfyui-stub/server.py
+# then run the API with:
+#   GENERATION_BACKEND=comfyui
+#   COMFYUI_URL=http://127.0.0.1:8188
+```
+
+With Docker:
+
 ```bash
 docker compose --profile comfyui up --build
 # then set GENERATION_BACKEND=comfyui on the worker

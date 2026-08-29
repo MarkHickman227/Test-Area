@@ -102,6 +102,7 @@ def to_view(db: Session, job: GenerationJob) -> GenerationJobView:
         parameters=job.parameters,
         created_at=job.created_at,
         failure_code=job.failure_code,
+        worker_id=job.worker_id,
     )
 
 

@@ -19,7 +19,10 @@ type Job = {
   queue_position: number | null;
   policy_decision: string;
   failure_code?: string | null;
+  worker_id?: string | null;
 };
+
+type Launch = { generation_backend?: string };
 
 const ASPECT_RES: Record<string, string> = {
   "1:1": "768x768",
@@ -36,12 +39,16 @@ export default function GeneratePage() {
   const [job, setJob] = useState<Job | null>(null);
   const [aspect, setAspect] = useState("2:3");
   const [count, setCount] = useState(1);
+  const [backend, setBackend] = useState("mock");
 
   useEffect(() => {
     api<typeof account>("/v1/account")
       .then(setAccount)
       .catch((err) => setError((err as Error).message));
     api<Options>("/v1/generation/options").then(setOptions).catch(() => undefined);
+    api<Launch>("/v1/meta/launch")
+      .then((meta) => setBackend(meta.generation_backend || "mock"))
+      .catch(() => undefined);
   }, []);
 
   const estimate = useMemo(() => {
@@ -92,8 +99,14 @@ export default function GeneratePage() {
   return (
     <div className="grid grid-2">
       <form className="card" onSubmit={onSubmit}>
-        <p className="kicker">Generation workspace</p>
+        <p className="kicker">{backend === "comfyui" ? "ComfyUI workspace" : "Generation workspace"}</p>
         <h1>Compose a private image</h1>
+        {backend === "comfyui" ? (
+          <p className="muted">
+            Generation runs through a private ComfyUI worker and a pinned workflow. There is no graph editor
+            and you cannot upload models or custom nodes.
+          </p>
+        ) : null}
         <label>Model profile</label>
         <select name="model_profile_id" defaultValue="adult-illustration-v1">
           {(options?.model_profiles || []).map((p) => (
@@ -165,6 +178,7 @@ export default function GeneratePage() {
             </p>
             <p className="muted">Policy: {job.policy_decision}</p>
             <p className="muted">Cost reserved: {job.estimated_credit_cost}</p>
+            {job.worker_id ? <p className="muted">Worker: {job.worker_id}</p> : null}
             {job.status === "COMPLETED" ? <Link href="/library">Open library</Link> : null}
             {job.status === "QUEUED" ? (
               <button
