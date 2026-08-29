@@ -24,6 +24,7 @@ The API process exits on boot if secrets are still examples, SQLite is used, san
 - Privileged admins must complete MFA (`REQUIRE_MFA_PRIVILEGED=true`)
 - Mailhog, if used, is bound to `127.0.0.1:8025` only
 - `scripts/backup.sh` then `scripts/restore.sh` on a copy of the database
+- Full pre-deploy pack: `docs/PRE-DEPLOY.md` (`pytest` plus `python scripts/preflight.py --expect-staging`)
 
 ## Still go/no-go (not this overlay)
 
