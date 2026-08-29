@@ -54,6 +54,8 @@ Dev accounts (non-production): `adult@example.com` / `dev-user-password` and `ad
 cd apps/api && PYTHONPATH=. pytest -q
 ```
 
+Pre-deploy release gates (pytest, live API preflight, staging walkthrough): `docs/PRE-DEPLOY.md`.
+
 ## Docker
 
 Copy `.env.example` to `.env`, set `ENCRYPTION_KEY` and secrets, then `docker compose up --build`. Networks: `public_net`, `app_net`, `gpu_net`. Only Caddy publishes 80/443. Mailhog is bound to `127.0.0.1:8025`.
