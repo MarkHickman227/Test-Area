@@ -19,7 +19,13 @@ type Job = {
   queue_position: number | null;
   policy_decision: string;
   failure_code?: string | null;
+  worker_id?: string | null;
+  output_ids?: string[];
 };
+
+const TERMINAL = new Set(["COMPLETED", "FAILED", "CANCELLED", "BLOCKED", "EXPIRED"]);
+
+type Launch = { generation_backend?: string };
 
 const ASPECT_RES: Record<string, string> = {
   "1:1": "768x768",
@@ -36,13 +42,39 @@ export default function GeneratePage() {
   const [job, setJob] = useState<Job | null>(null);
   const [aspect, setAspect] = useState("2:3");
   const [count, setCount] = useState(1);
+  const [backend, setBackend] = useState("mock");
 
   useEffect(() => {
     api<typeof account>("/v1/account")
       .then(setAccount)
       .catch((err) => setError((err as Error).message));
     api<Options>("/v1/generation/options").then(setOptions).catch(() => undefined);
+    api<Launch>("/v1/meta/launch")
+      .then((meta) => setBackend(meta.generation_backend || "mock"))
+      .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!job?.job_id) return;
+    const done =
+      TERMINAL.has(job.status) && (job.status !== "COMPLETED" || Boolean(job.output_ids?.length));
+    if (done) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const next = await api<Job>(`/v1/generations/${job.job_id}`);
+        if (!cancelled) setJob(next);
+      } catch {
+        /* keep last known status */
+      }
+    };
+    const timer = window.setInterval(poll, 1500);
+    void poll();
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [job]);
 
   const estimate = useMemo(() => {
     const base = options?.model_profiles[0]?.base_credit_cost || 4;
@@ -92,8 +124,14 @@ export default function GeneratePage() {
   return (
     <div className="grid grid-2">
       <form className="card" onSubmit={onSubmit}>
-        <p className="kicker">Generation workspace</p>
+        <p className="kicker">{backend === "comfyui" ? "ComfyUI workspace" : "Generation workspace"}</p>
         <h1>Compose a private image</h1>
+        {backend === "comfyui" ? (
+          <p className="muted">
+            Generation runs through a private ComfyUI worker and a pinned workflow. There is no graph editor
+            and you cannot upload models or custom nodes.
+          </p>
+        ) : null}
         <label>Model profile</label>
         <select name="model_profile_id" defaultValue="adult-illustration-v1">
           {(options?.model_profiles || []).map((p) => (
@@ -165,7 +203,25 @@ export default function GeneratePage() {
             </p>
             <p className="muted">Policy: {job.policy_decision}</p>
             <p className="muted">Cost reserved: {job.estimated_credit_cost}</p>
-            {job.status === "COMPLETED" ? <Link href="/library">Open library</Link> : null}
+            {job.worker_id ? <p className="muted">Worker: {job.worker_id}</p> : null}
+            {job.failure_code ? <p className="error">Failure: {job.failure_code}</p> : null}
+            {job.status === "COMPLETED" && job.output_ids?.length ? (
+              <div className="job-previews" style={{ display: "grid", gap: "0.65rem", marginTop: "0.85rem" }}>
+                {job.output_ids.map((outputId) => (
+                  <Link key={outputId} href={`/library/${outputId}`} className="thumb">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img alt="Generated output" src={`/v1/library/outputs/${outputId}/thumbnail`} />
+                  </Link>
+                ))}
+                <p>
+                  <Link href="/library">Open library</Link>
+                </p>
+              </div>
+            ) : job.status === "COMPLETED" ? (
+              <p>
+                <Link href="/library">Open library</Link>
+              </p>
+            ) : null}
             {job.status === "QUEUED" ? (
               <button
                 className="secondary"
@@ -180,7 +236,11 @@ export default function GeneratePage() {
             ) : null}
           </div>
         ) : (
-          <p className="muted">Submit a prompt to see live job status. History lives in your private library.</p>
+          <p className="muted">
+            Submit a prompt to see live job status and the resulting image here.
+            History also lives in your private library.
+            Backend: {backend === "comfyui" ? "ComfyUI (pinned workflow)" : "mock placeholders"}.
+          </p>
         )}
         <p style={{ marginTop: "1.5rem" }}>
           <Link href="/library">Job history / library</Link>

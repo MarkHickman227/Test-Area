@@ -11,18 +11,50 @@ import uuid
 
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse, Response
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 app = FastAPI(title="PrivateCanvas ComfyUI stub", docs_url=None, redoc_url=None)
 _JOBS: dict[str, dict] = {}
 
 
-def _placeholder_png(label: str) -> bytes:
-    image = Image.new("RGB", (256, 256), (28, 24, 22))
+def _clamp(value: object, default: int, lo: int, hi: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(lo, min(hi, parsed))
+
+
+def _latent_size(prompt: dict) -> tuple[int, int, int]:
+    latent = prompt.get("4") or {}
+    inputs = latent.get("inputs") if isinstance(latent, dict) else {}
+    if not isinstance(inputs, dict):
+        inputs = {}
+    width = _clamp(inputs.get("width"), 768, 64, 1152)
+    height = _clamp(inputs.get("height"), 768, 64, 1152)
+    batch = _clamp(inputs.get("batch_size"), 1, 1, 4)
+    return width, height, batch
+
+
+def _placeholder_png(label: str, width: int = 256, height: int = 256) -> bytes:
+    image = Image.new("RGB", (width, height), (58, 48, 38))
     draw = ImageDraw.Draw(image)
-    draw.rectangle([12, 12, 244, 244], outline=(196, 165, 116), width=3)
-    draw.text((24, 110), "ComfyUI stub", fill=(243, 239, 232))
-    draw.text((24, 130), label[:24], fill=(196, 165, 116))
+    inset = max(10, min(width, height) // 16)
+    draw.rectangle(
+        [inset, inset, width - inset, height - inset],
+        outline=(212, 176, 118),
+        width=max(4, min(width, height) // 48),
+    )
+    try:
+        title = ImageFont.load_default(size=max(28, min(width, height) // 10))
+        body = ImageFont.load_default(size=max(18, min(width, height) // 16))
+    except TypeError:
+        title = ImageFont.load_default()
+        body = title
+    text_x = inset + max(12, width // 20)
+    text_y = height // 3
+    draw.text((text_x, text_y), "ComfyUI stub", fill=(243, 239, 232), font=title)
+    draw.text((text_x, text_y + max(36, height // 14)), label[:36], fill=(212, 176, 118), font=body)
     buf = io.BytesIO()
     image.save(buf, format="PNG")
     return buf.getvalue()
@@ -39,17 +71,12 @@ def submit_prompt(body: dict):
     if not isinstance(prompt, dict) or not prompt:
         return JSONResponse({"error": "prompt graph required"}, status_code=400)
     prompt_id = str(uuid.uuid4())
-    batch = 1
-    latent = prompt.get("4") or {}
-    inputs = latent.get("inputs") if isinstance(latent, dict) else {}
-    if isinstance(inputs, dict):
-        try:
-            batch = max(1, int(inputs.get("batch_size") or 1))
-        except (TypeError, ValueError):
-            batch = 1
+    width, height, batch = _latent_size(prompt)
     _JOBS[prompt_id] = {
         "prompt": prompt,
         "batch": batch,
+        "width": width,
+        "height": height,
         "client_id": body.get("client_id"),
     }
     return {"prompt_id": prompt_id, "number": 1}
@@ -79,4 +106,16 @@ def view(
     type: str = Query("output"),
 ):
     _ = (subfolder, type)
-    return Response(content=_placeholder_png(filename), media_type="image/png")
+    prompt_id = filename.rsplit("-", 1)[0]
+    job = _JOBS.get(prompt_id) or {}
+    width = int(job.get("width") or 256)
+    height = int(job.get("height") or 256)
+    return Response(
+        content=_placeholder_png(filename, width, height), media_type="image/png"
+    )
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=8188)

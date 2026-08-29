@@ -1,3 +1,4 @@
+import io
 from pathlib import Path
 from uuid import uuid4
 
@@ -194,6 +195,8 @@ def test_comfyui_backend_completes_inline_job(client, monkeypatch):
     )
     assert res.status_code == 200, res.text
     assert res.json()["status"] == "COMPLETED"
+    assert res.json()["worker_id"] == "comfyui-worker-1"
+    assert res.json()["output_ids"]
     from app.db import get_session_factory
 
     db = get_session_factory()()
@@ -237,3 +240,5 @@ def test_comfyui_stub_http_contract():
     viewed = stub.get("/view", params=images[0])
     assert viewed.status_code == 200
     assert viewed.content[:8] == b"\x89PNG\r\n\x1a\n"
+    with Image.open(io.BytesIO(viewed.content)) as img:
+        assert img.size == (64, 64)

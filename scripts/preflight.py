@@ -77,10 +77,17 @@ class Preflight:
             meta.get("payments_enabled") is False,
             f"payments_enabled should be false, got {meta.get('payments_enabled')}",
         )
-        self.expect(
-            meta.get("generation_backend") == "mock",
-            f"generation_backend should be mock, got {meta.get('generation_backend')}",
-        )
+        backend = meta.get("generation_backend")
+        if expect_staging:
+            self.expect(
+                backend == "mock",
+                f"staging generation_backend should be mock, got {backend}",
+            )
+        else:
+            self.expect(
+                backend in {"mock", "comfyui"},
+                f"generation_backend should be mock or comfyui, got {backend}",
+            )
         self.expect(
             meta.get("payment_provider") == "none",
             f"payment_provider should be none, got {meta.get('payment_provider')}",
