@@ -87,6 +87,15 @@ def test_staging_rejects_comfyui_until_gpu_host(monkeypatch):
         get_settings.cache_clear()
 
 
+def test_staging_rejects_hotapi_until_vendor_go(monkeypatch):
+    _staging_env(monkeypatch, GENERATION_BACKEND="hotapi")
+    try:
+        problems = validate_settings(get_settings())
+        assert any("GENERATION_BACKEND" in item for item in problems)
+    finally:
+        get_settings.cache_clear()
+
+
 def test_assert_runtime_safe_raises(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
     get_settings.cache_clear()

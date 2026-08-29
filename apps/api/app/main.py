@@ -24,6 +24,7 @@ from app.routers import (
     age_verification,
     auth,
     billing,
+    generate_image,
     generations,
     health,
     launch,
@@ -102,6 +103,7 @@ def create_app() -> FastAPI:
     application.include_router(age_verification.router)
     application.include_router(generations.router)
     application.include_router(generations.options_router)
+    application.include_router(generate_image.router)
     application.include_router(library.router)
     application.include_router(billing.router)
     application.include_router(payments.router)

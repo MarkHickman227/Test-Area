@@ -6,15 +6,18 @@ from app.config import Settings
 from app.crypto import CryptoService
 from app.jobs.backends import MockBackend
 from app.jobs.comfyui import ComfyUIBackend
+from app.jobs.hotapi import HotAPIBackend
 from app.jobs.runner import GenerationWorker
 from app.services.storage import StorageBackend
 
 
 def make_backend(
     settings: Settings, db: Session, crypto: CryptoService
-) -> MockBackend | ComfyUIBackend:
+) -> MockBackend | ComfyUIBackend | HotAPIBackend:
     if settings.generation_backend == "comfyui":
         return ComfyUIBackend(settings, db, crypto)
+    if settings.generation_backend == "hotapi":
+        return HotAPIBackend(settings, db, crypto)
     return MockBackend()
 
 
