@@ -19,8 +19,12 @@ export default function AccountPage() {
   }
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("mfa") === "1") {
+      router.replace("/mfa");
+      return;
+    }
     refresh();
-  }, []);
+  }, [router]);
 
   if (error) return <p className="error">{error}</p>;
   if (!account) return <p className="muted">Loading…</p>;

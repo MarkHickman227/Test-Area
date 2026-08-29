@@ -21,7 +21,12 @@ export default function AdminHome() {
     <div>
       <p className="kicker">Operator</p>
       <h1>Operations</h1>
-      {error ? <p className="error">{error}</p> : null}
+      {error ? (
+        <p className="error">
+          {error}{" "}
+          {error.toLowerCase().includes("multi-factor") ? <Link href="/mfa">Complete authenticator setup</Link> : null}
+        </p>
+      ) : null}
       <div className="row" style={{ marginBottom: "1rem" }}>
         <Link className="button secondary" href="/admin/moderation">
           Moderation

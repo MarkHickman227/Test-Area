@@ -18,7 +18,7 @@ export default function LoginPage() {
         body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
       });
       if (data.mfa_required) {
-        router.push("/account?mfa=1");
+        router.push("/mfa");
         return;
       }
       if (data.user.status === "PENDING_AGE_VERIFICATION") router.push("/age-verification");
