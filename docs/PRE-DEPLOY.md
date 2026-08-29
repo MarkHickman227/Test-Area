@@ -36,7 +36,7 @@ The script never enables payments or loads model weights.
 2. Unverified account cannot generate or check out
 3. Blocked prompt never appears as QUEUED
 4. Support search does not show images (also `tests/test_predeploy.py` + preflight `--support-email`)
-5. Privileged admin MFA works (`REQUIRE_MFA_PRIVILEGED=true`; covered by pytest)
+5. Privileged admin MFA works (`REQUIRE_MFA_PRIVILEGED=true`; pytest plus `/mfa` after sign-in)
 6. `scripts/backup.sh` then restore into a copy (`scripts/restore.sh`; covered by pytest)
 7. Optional: `python3 scripts/load_probe.py --base http://127.0.0.1:8000` (health only)
 
