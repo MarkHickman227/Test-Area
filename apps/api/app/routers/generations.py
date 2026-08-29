@@ -14,7 +14,7 @@ from app.deps import AuthContext, get_job_service, get_storage, require_auth
 from app.errors import AppError
 from app.jobs.runner import process_job_by_id
 from app.models.enums import JobStatus, ModerationState
-from app.models.generation import GenerationJob, ModelProfile, StylePreset
+from app.models.generation import GenerationJob, GenerationOutput, ModelProfile, StylePreset
 from app.schemas.generation import (
     CancelResponse,
     CreateGenerationRequest,
@@ -103,6 +103,17 @@ def to_view(db: Session, job: GenerationJob) -> GenerationJobView:
         created_at=job.created_at,
         failure_code=job.failure_code,
         worker_id=job.worker_id,
+        output_ids=[
+            row.id
+            for row in db.scalars(
+                select(GenerationOutput)
+                .where(
+                    GenerationOutput.job_id == job.id,
+                    GenerationOutput.deleted_at.is_(None),
+                )
+                .order_by(GenerationOutput.sequence_number.asc())
+            ).all()
+        ],
     )
 
 

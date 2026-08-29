@@ -46,6 +46,7 @@ class GenerationJobView(APIModel):
     created_at: datetime
     failure_code: str | None = None
     worker_id: str | None = None
+    output_ids: list[str] = []
 
 
 class CancelResponse(APIModel):
