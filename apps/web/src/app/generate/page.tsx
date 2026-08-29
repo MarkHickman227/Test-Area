@@ -194,7 +194,10 @@ export default function GeneratePage() {
             ) : null}
           </div>
         ) : (
-          <p className="muted">Submit a prompt to see live job status. History lives in your private library.</p>
+          <p className="muted">
+            Submit a prompt to see live job status. History lives in your private library.
+            Backend: {backend === "comfyui" ? "ComfyUI (pinned workflow)" : "mock placeholders"}.
+          </p>
         )}
         <p style={{ marginTop: "1.5rem" }}>
           <Link href="/library">Job history / library</Link>
