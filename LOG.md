@@ -2,6 +2,26 @@
 
 Operational record of changes. Newest first.
 
+## 2026-09-05 — How to turn on SMTP on the VPS
+
+ApplyPilot sends through your mailbox. It does not host SMTP.
+
+Gmail: enable 2-Step Verification, create an App Password, put this in `/root/applypilot/config/.env`:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASSWORD=<gmail-app-password>
+APPLY_FROM_EMAIL=you@gmail.com
+```
+
+Then `docker compose up -d --force-recreate backend` (never `down -v`). Health should show `smtp_configured: true` and `can_send_applications: true`.
+
+Hostinger mail: `smtp.hostinger.com`, port 587, that mailbox as user/from.
+
+SMTP still needs a recruiter address on the listing. Most current drafts have none.
+
 ## 2026-09-05 — VPS pull succeeded (`cv-apply-1` is live)
 
 Ran as `root@srv832290` from the Hostinger bash console. Backup: `backups/applypilot_20260905T182826Z.sql.gz`. Compose rebuilt; Postgres volume kept. Brief `curl: (56) Connection reset` while the new backend started, then health came up.

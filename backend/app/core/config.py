@@ -111,8 +111,11 @@ class Settings(BaseSettings):
 
     @property
     def smtp_configured(self) -> bool:
-        return self._has_real_secret(self.smtp_host) and self._has_real_secret(
-            self.apply_from_email
+        return (
+            self._has_real_secret(self.smtp_host)
+            and self._has_real_secret(self.apply_from_email)
+            and self._has_real_secret(self.smtp_user)
+            and self._has_real_secret(self.smtp_password)
         )
 
     @property

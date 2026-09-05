@@ -52,3 +52,24 @@ def test_placeholder_database_url_is_not_configured():
     )
 
     assert settings.database_configured is False
+
+
+def test_smtp_configured_needs_host_user_password_and_from():
+    empty = Settings()
+    assert empty.smtp_configured is False
+    assert empty.can_send_applications is False
+
+    partial = Settings(
+        SMTP_HOST="smtp.gmail.com",
+        APPLY_FROM_EMAIL="you@gmail.com",
+    )
+    assert partial.smtp_configured is False
+
+    full = Settings(
+        SMTP_HOST="smtp.gmail.com",
+        SMTP_USER="you@gmail.com",
+        SMTP_PASSWORD="app-password-value",
+        APPLY_FROM_EMAIL="you@gmail.com",
+    )
+    assert full.smtp_configured is True
+    assert full.can_send_applications is True
