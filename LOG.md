@@ -2,6 +2,32 @@
 
 Operational record of changes. Newest first.
 
+## 2026-09-05 — VPS pull succeeded (`cv-apply-1` is live)
+
+Ran as `root@srv832290` from the Hostinger bash console. Backup: `backups/applypilot_20260905T182826Z.sql.gz`. Compose rebuilt; Postgres volume kept. Brief `curl: (56) Connection reset` while the new backend started, then health came up.
+
+Live health after pull:
+
+- `repair_version: cv-apply-1`
+- `full_cv_scoring: true`
+- `can_send_applications: false` (no SMTP, no Unipile)
+- Current CV reparsed: roles EA/SA/Data Architect, Azure, TOGAF 9.1, 20 contract years
+
+Pipeline from the pull script:
+
+- Backfill: processed 80, scored 80, generated 80, applied 0, apply_blocked 80
+- Apply: processed 80, applied 0, apply_blocked 80
+- Analytics: 211 jobs, DRAFT 80, NEW 71, SUBMITTED 60 (July LinkedIn import), score_ge_60 80, max 100, unscored 113
+
+Checked after pull:
+
+- Solution Architect - Azure Cloud: **15 → 100**, status DRAFT, cover letter written from the full CV
+- Enterprise Architect Director / Executive Director EA: 100 DRAFT
+- Enterprise Architect - Emergent Technology: still **25 NEW** (not in the first 80)
+- Enterprise Account Director: still 15 NEW (old empty-profile score, not yet rescored)
+
+Remaining work on the VPS: run backfill two more times for the 71 NEW / 113 unscored rows. Applications still cannot send until SMTP or Unipile is in `/root/applypilot/config/.env`.
+
 ## 2026-09-05 — Windows PowerShell cannot run the VPS pull
 
 From `PS C:\Users\MarkHickman>`, this failed:
@@ -84,8 +110,16 @@ Public listing URLs are mostly job-board search pages or expired ads. There is n
 
 ### VPS install (Hostinger console, bash as root)
 
+Do not paste the bash one-liner into Windows PowerShell.
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/rescore-full-cv-53b6/scripts/vps-pull-repair.sh | bash
+```
+
+From Windows, SSH it onto the VPS instead:
+
+```powershell
+ssh root@168.231.114.133 "curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/rescore-full-cv-53b6/scripts/vps-pull-repair.sh | bash"
 ```
 
 Expect `repair_version: cv-apply-1`. Do not run `docker compose down -v`.

@@ -58,22 +58,25 @@ cd "$APP_DIR"
 docker compose up -d --build
 docker compose ps
 
-for _ in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:8000/api/health | grep -qE 'cv-apply-1|cv-rescore-1|cv-full-1'; then
+for _ in $(seq 1 45); do
+  if curl -fsS --max-time 10 http://127.0.0.1:8000/api/health | grep -qE 'cv-apply-1|cv-rescore-1|cv-full-1'; then
     echo "repair_version is current"
     break
   fi
   sleep 2
 done
-curl -sS http://127.0.0.1:8000/api/health
+curl -sS --max-time 15 http://127.0.0.1:8000/api/health
 echo
-curl -sS -X POST http://127.0.0.1:8000/api/cvs/reparse
+curl -sS --max-time 60 -X POST http://127.0.0.1:8000/api/cvs/reparse
 echo
-curl -sS --max-time 300 -X POST 'http://127.0.0.1:8000/api/pipeline/backfill?limit=80'
-echo
+# One pass only covers 80 jobs. Repeat so older NEW rows leave the old 0-25 scores.
+for _ in 1 2 3; do
+  curl -sS --max-time 300 -X POST 'http://127.0.0.1:8000/api/pipeline/backfill?limit=80'
+  echo
+done
 curl -sS --max-time 300 -X POST 'http://127.0.0.1:8000/api/pipeline/apply?limit=80'
 echo
-curl -sS http://127.0.0.1:8000/api/analytics
+curl -sS --max-time 15 http://127.0.0.1:8000/api/analytics
 echo
 rm -rf "$STAGING"
-echo "Repair pull finished. Repeat POST /api/pipeline/backfill if score_ge_60 is still 0."
+echo "Repair pull finished. Repeat POST /api/pipeline/backfill if unscored jobs remain."
