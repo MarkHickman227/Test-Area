@@ -198,22 +198,49 @@ class PostgresRepository:
             [job_id, artifact_type, Jsonb(content)],
         )
 
-    async def insert_recruiter_outreach(self, job_id: str, email_body: str) -> None:
+    async def insert_recruiter_outreach(
+        self,
+        job_id: str,
+        email_body: str,
+        contact_email: str | None = None,
+        email_sent: bool = False,
+        linkedin_sent: bool = False,
+    ) -> None:
         await self._execute(
             """
-            insert into recruiter_outreach (job_id, email_body)
-            values (%s, %s)
-            on conflict (job_id) do update set email_body = excluded.email_body, updated_at = now()
+            insert into recruiter_outreach (job_id, email_body, contact_email, email_sent, linkedin_sent)
+            values (%s, %s, %s, %s, %s)
+            on conflict (job_id) do update set
+                email_body = excluded.email_body,
+                contact_email = excluded.contact_email,
+                email_sent = excluded.email_sent,
+                linkedin_sent = excluded.linkedin_sent,
+                updated_at = now()
             """,
-            [job_id, email_body],
+            [job_id, email_body, contact_email, email_sent, linkedin_sent],
         )
 
-    async def get_best_cv(self) -> dict[str, Any] | None:
+    async def list_applyable_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
         rows = await self._fetch_all(
-            "select id, label, parsed_profile, raw_text from cvs order by created_at desc limit 1",
+            """
+            select *
+            from jobs
+            where status in ('NEW', 'DRAFT')
+            order by created_at desc
+            limit %s
+            """,
+            [limit],
+        )
+        return [dict(row) for row in rows]
+
+    async def get_best_cv(self) -> dict[str, Any] | None:
+        from app.services.cv_parser import select_best_cv
+
+        rows = await self._fetch_all(
+            "select id, label, parsed_profile, raw_text from cvs order by created_at desc",
             [],
         )
-        return dict(rows[0]) if rows else None
+        return select_best_cv([dict(row) for row in rows])
 
     async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
         rows = await self._fetch_all(

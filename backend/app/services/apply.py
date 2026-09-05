@@ -11,7 +11,16 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-_BLOCKED_EMAIL = {"example.com", "sentry.io", "wixpress.com"}
+_LINKEDIN_ATTENDEE_RE = re.compile(r"\b(ACo[A-Za-z0-9_-]{10,})\b")
+_BLOCKED_EMAIL = {
+    "example.com",
+    "sentry.io",
+    "wixpress.com",
+    "bebee.com",
+    "linkedin.com",
+    "indeed.com",
+    "jooble.org",
+}
 
 
 def build_application_pack(job: dict[str, Any], cv_profile: dict[str, Any] | None) -> dict[str, str]:
@@ -32,6 +41,18 @@ def build_application_pack(job: dict[str, Any], cv_profile: dict[str, Any] | Non
         "cover_letter": letter.strip(),
         "cv_summary": (summary or roles)[:1200],
     }
+
+
+def listing_linkedin_attendee(job: dict[str, Any]) -> str | None:
+    blob = " ".join(
+        [
+            str(job.get("description") or ""),
+            str(job.get("source_url") or ""),
+            str((job.get("parsed_requirements") or {}).get("recruiter_linkedin_id") or ""),
+        ]
+    )
+    match = _LINKEDIN_ATTENDEE_RE.search(blob)
+    return match.group(1) if match else None
 
 
 def listing_contact_email(job: dict[str, Any]) -> str | None:
@@ -92,16 +113,61 @@ async def auto_apply(
     cv_profile: dict[str, Any] | None,
     settings: Any,
 ) -> dict[str, Any]:
-    """Record the application. Email it when SMTP and a listing contact exist."""
+    """Send only when SMTP or Unipile can deliver. Packs alone are not applies."""
+    from app.services.unipile import send_unipile_email, send_unipile_linkedin, unipile_configured
+
     cv_text = ((cv_profile or {}).get("raw_text") or (cv_profile or {}).get("summary") or "").strip()
     contact = listing_contact_email(job)
+    attendee = listing_linkedin_attendee(job)
+    subject = f"Application: {job.get('title') or 'Role'} — Mark Hickman"
+    body = pack.get("cover_letter") or ""
+    if cv_text:
+        body += "\n\n--- Uploaded CV ---\n" + cv_text[:15000]
+    linkedin_note = pack.get("recruiter_outreach") or pack.get("cover_letter") or ""
+
     emailed = False
+    linkedin_sent = False
+    channel = "apply_blocked"
+    reason = "no_send_channel"
     if contact and smtp_configured(settings):
         emailed = send_application_email(settings, job, pack, cv_text, contact)
+        if emailed:
+            channel = "smtp"
+            reason = None
+        else:
+            reason = "smtp_failed"
+    elif contact and unipile_configured(settings):
+        emailed = await send_unipile_email(
+            settings, to_email=contact, subject=subject, body=body
+        )
+        if emailed:
+            channel = "unipile_email"
+            reason = None
+        else:
+            reason = "unipile_email_failed"
+    elif not contact:
+        reason = "no_listing_contact"
+
+    if attendee and unipile_configured(settings):
+        linkedin_sent = await send_unipile_linkedin(
+            settings, attendee_id=attendee, text=linkedin_note[:2000]
+        )
+        if linkedin_sent:
+            channel = "unipile_linkedin" if not emailed else "unipile_email_linkedin"
+            reason = None
+        elif reason == "no_listing_contact":
+            reason = "unipile_linkedin_failed"
+
+    submitted = bool(emailed or linkedin_sent)
+    if submitted:
+        reason = None
     return {
-        "submitted": True,
+        "submitted": submitted,
         "emailed": emailed,
+        "linkedin_sent": linkedin_sent,
         "contact_email": contact,
+        "linkedin_attendee": attendee,
         "source_url": job.get("source_url"),
-        "channel": "email" if emailed else "application_pack",
+        "channel": channel if submitted else "apply_blocked",
+        "reason": reason,
     }

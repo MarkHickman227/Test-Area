@@ -62,6 +62,12 @@ class Settings(BaseSettings):
     smtp_user: str | None = Field(default=None, validation_alias="SMTP_USER")
     smtp_password: str | None = Field(default=None, validation_alias="SMTP_PASSWORD")
     apply_from_email: str | None = Field(default=None, validation_alias="APPLY_FROM_EMAIL")
+    unipile_dsn: str | None = Field(default=None, validation_alias="UNIPILE_DSN")
+    unipile_api_key: str | None = Field(default=None, validation_alias="UNIPILE_API_KEY")
+    unipile_account_id: str | None = Field(default=None, validation_alias="UNIPILE_ACCOUNT_ID")
+    unipile_email_account_id: str | None = Field(
+        default=None, validation_alias="UNIPILE_EMAIL_ACCOUNT_ID"
+    )
 
     model_config = SettingsConfigDict(
         env_file="config/.env",
@@ -105,9 +111,22 @@ class Settings(BaseSettings):
 
     @property
     def smtp_configured(self) -> bool:
-        return self._has_real_secret(self.smtp_host) and self._has_real_secret(
-            self.apply_from_email
+        return (
+            self._has_real_secret(self.smtp_host)
+            and self._has_real_secret(self.apply_from_email)
+            and self._has_real_secret(self.smtp_user)
+            and self._has_real_secret(self.smtp_password)
         )
+
+    @property
+    def unipile_configured(self) -> bool:
+        return self._has_real_secret(self.unipile_dsn) and self._has_real_secret(
+            self.unipile_api_key
+        )
+
+    @property
+    def can_send_applications(self) -> bool:
+        return self.smtp_configured or self.unipile_configured
 
     @property
     def trigger_token_configured(self) -> bool:

@@ -4,13 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ApplyPilot</title>
-    <link rel="stylesheet" href="/styles.css?v=cv5" />
+    <link rel="stylesheet" href="/styles.css?v=cv7" />
   </head>
   <body>
     <header class="app-header">
       <div>
         <p class="eyebrow">ApplyPilot</p>
         <h1>Job application dashboard</h1>
+        <p class="meta">Scores come from the uploaded Current CV, not an empty profile.</p>
       </div>
       <nav class="header-nav">
         <button class="nav-btn active" data-view="dashboard">Dashboard</button>
@@ -70,6 +71,8 @@
             <div class="jobs-header">
               <h2>Jobs <span id="jobs-filter-label" class="meta">All</span></h2>
               <button id="refresh" type="button" class="secondary">Refresh</button>
+              <button id="rescore-cv" type="button" class="secondary">Rescore from Current CV</button>
+              <button id="apply-now" type="button" class="secondary">Apply to 60+ jobs</button>
             </div>
             <div id="jobs" class="jobs-list">Loading jobs...</div>
           </section>
@@ -93,7 +96,10 @@
       <section class="card">
         <h2>CV Management</h2>
         <div id="cv-list">Loading CVs...</div>
-        <p><button class="secondary" type="button" id="cv-reparse">Reparse stored CVs</button></p>
+        <p>
+          <button class="secondary" type="button" id="cv-reparse">Reparse stored CVs</button>
+          <button class="secondary" type="button" id="cv-rescore">Rescore jobs from Current CV</button>
+        </p>
         <h3>Upload new CV</h3>
         <label>Label <input id="cv-label" type="text" placeholder="e.g. EA Focus" /></label>
         <label>File name <input id="cv-filename" type="text" placeholder="cv_architecture.pdf" /></label>
@@ -102,7 +108,7 @@
       </section>
     </main>
 
-    <script src="/app.js?v=cv5"></script>
-    <script src="/extras.js?v=cv5"></script>
+    <script src="/app.js?v=cv7"></script>
+    <script src="/extras.js?v=cv7"></script>
   </body>
 </html>

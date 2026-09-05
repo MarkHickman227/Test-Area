@@ -29,7 +29,7 @@ When this agent is started by the twice-daily automation:
 4. If `PIPELINE_TRIGGER_TOKEN` is set, send `Authorization: Bearer <token>`.
 5. Verify the response `status` is `ok` or a clear intentional `skipped` reason.
 6. Do **not** open a PR unless code changes were required to unblock the run.
-7. Jobs that score 60+ against the full CV should be auto-applied (status `SUBMITTED`). Do not invent CV claims.
+7. Jobs that score 60+ against the full uploaded Current CV should get a pack and be sent when SMTP/Unipile can send. Do not invent CV claims. Empty-profile scores (0–25) are wrong and must be replaced.
 
 ### Required secrets (Cloud Agents dashboard + VPS `config/.env`)
 

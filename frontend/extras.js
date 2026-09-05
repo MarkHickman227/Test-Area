@@ -103,7 +103,49 @@ async function reparseCvs() {
   }
 }
 
+async function applyFromCurrentCv() {
+  try {
+    const result = await request("/pipeline/apply?limit=80", { method: "POST" });
+    const stats = result.stats || result;
+    alert(
+      `Apply run: scored ${stats.scored ?? 0}, applied ${stats.applied ?? 0}, blocked ${stats.apply_blocked ?? 0}.`
+    );
+    if (typeof loadJobs === "function") {
+      loadJobs();
+    }
+    if (typeof loadHealth === "function") {
+      loadHealth();
+    }
+  } catch (error) {
+    alert(`Failed to apply: ${error.message}`);
+  }
+}
+
+async function rescoreFromCurrentCv() {
+  try {
+    const result = await request("/pipeline/backfill?limit=80", { method: "POST" });
+    const stats = result.stats || result;
+    alert(
+      `Rescored from Current CV. scored ${stats.scored ?? 0}, drafts ${stats.generated ?? 0}, applied ${stats.applied ?? 0}.`
+    );
+    if (typeof loadJobs === "function") {
+      loadJobs();
+    }
+    if (typeof loadHealth === "function") {
+      loadHealth();
+    }
+  } catch (error) {
+    alert(`Failed to rescore jobs: ${error.message}`);
+  }
+}
+
 document.getElementById("cv-reparse").addEventListener("click", reparseCvs);
+const cvRescore = document.getElementById("cv-rescore");
+if (cvRescore) cvRescore.addEventListener("click", rescoreFromCurrentCv);
+const dashRescore = document.getElementById("rescore-cv");
+if (dashRescore) dashRescore.addEventListener("click", rescoreFromCurrentCv);
+const applyNow = document.getElementById("apply-now");
+if (applyNow) applyNow.addEventListener("click", applyFromCurrentCv);
 
 document.getElementById("cv-upload").addEventListener("click", async () => {
   const label = document.getElementById("cv-label").value.trim();

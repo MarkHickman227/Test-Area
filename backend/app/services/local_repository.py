@@ -114,16 +114,37 @@ class LocalRepository:
         )
         self._save()
 
-    async def insert_recruiter_outreach(self, job_id: str, email_body: str) -> None:
-        self._data["outreach"][job_id] = {"email_body": email_body, "email_sent": False, "linkedin_sent": False}
+    async def insert_recruiter_outreach(
+        self,
+        job_id: str,
+        email_body: str,
+        contact_email: str | None = None,
+        email_sent: bool = False,
+        linkedin_sent: bool = False,
+    ) -> None:
+        self._data["outreach"][job_id] = {
+            "email_body": email_body,
+            "contact_email": contact_email,
+            "email_sent": email_sent,
+            "linkedin_sent": linkedin_sent,
+        }
         self._save()
 
+    async def list_applyable_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
+        pending = []
+        for job in self._data["jobs"].values():
+            if job.get("status") not in {"NEW", "DRAFT"}:
+                continue
+            pending.append(job)
+        pending.sort(key=lambda job: job.get("created_at") or "", reverse=True)
+        return pending[:limit]
+
     async def get_best_cv(self) -> dict[str, Any] | None:
+        from app.services.cv_parser import select_best_cv
+
         cvs = list(self._data["cvs"].values())
-        if not cvs:
-            return None
         cvs.sort(key=lambda cv: cv.get("created_at") or "", reverse=True)
-        return cvs[0]
+        return select_best_cv(cvs)
 
     async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
         pending = []

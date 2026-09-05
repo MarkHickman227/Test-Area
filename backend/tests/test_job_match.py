@@ -196,6 +196,48 @@ def test_match_compares_job_to_full_cv_text_not_skill_list_only():
     assert any("azure" in str(item).lower() for item in result["strengths"])
 
 
+def test_cloud_architect_listing_scores_from_title_and_cv():
+    result = match_job_to_cv(
+        {
+            "title": "Cloud Architect | Remote",
+            "location": "Remote UK",
+            "job_type": "PERM",
+            "description": "Remote UK cloud architecture role.",
+            "parsed_requirements": {},
+        },
+        {**CV, "raw_text": "Enterprise Architecture Leader with Azure, AWS and TOGAF."},
+        {"target_titles": ["Solutions Architect"], "locations": ["Remote UK"]},
+    )
+    assert result["score"] >= 60
+    assert "does not name the skills" not in result["score_explanation"]
+    assert "Azure" in result["strengths"] or "AWS" in result["strengths"]
+
+
+def test_live_search_titles_mostly_score_over_60():
+    titles = [
+        "Enterprise Architect - Emergent Technology & Exploitation",
+        "Solution Architect - Azure Cloud",
+        "Solution Architect - AWS, API, Microservices, Remote, FinTech",
+        "Chief Technology Officer (CTO)",
+        "Solutions Architect",
+        "Cloud Architect | Remote",
+        "Senior Enterprise Architect",
+        "Azure Integration Architect",
+        "WAF Architect",
+        "Enterprise Account Director (Strategic Accounts) – UK",
+    ]
+    scores = {}
+    for title in titles:
+        scores[title] = match_job_to_cv(
+            {"title": title, "location": "London", "job_type": "PERM", "description": title},
+            {**CV, "raw_text": "Enterprise Architect and Solutions Architect with Azure."},
+            {"target_titles": ["Enterprise Architect", "Solutions Architect", "CTO"], "locations": ["London"]},
+        )["score"]
+    assert scores["Enterprise Account Director (Strategic Accounts) – UK"] < 50
+    architect_scores = [score for title, score in scores.items() if "Account Director" not in title]
+    assert all(score >= 60 for score in architect_scores)
+
+
 def test_match_without_cv_does_not_invent_a_score():
     result = match_job_to_cv({"title": "Enterprise Architect"}, None)
     assert result["score"] is None

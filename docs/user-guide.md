@@ -4,7 +4,7 @@ Version 1.0 | Avalon Creative Ltd | 28/05/2026
 
 ApplyPilot is an AI job application agent that runs on your own server. It finds jobs, scores them against your **full uploaded CV**, writes the application, and applies automatically for roles that score 60 or above.
 
-When SMTP is configured and the listing has a contact email, ApplyPilot emails the cover letter plus CV. Listings without a contact are stored as Submitted with the application pack and source URL.
+When SMTP or Unipile is configured and the listing has a contact, ApplyPilot sends the cover letter plus CV. Listings without a sendable contact stay Draft. Packs alone are not applications.
 
 ## What ApplyPilot does
 

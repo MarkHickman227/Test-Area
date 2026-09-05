@@ -2,7 +2,7 @@
 
 **Production target:** Hostinger VPS (`168.231.114.133:8765`) — see `docs/vps-deployment.md`.
 
-Updated: 2026-07-31
+Updated: 2026-09-05. Full change record: [`LOG.md`](../LOG.md).
 
 ## Process map
 

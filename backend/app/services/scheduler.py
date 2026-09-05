@@ -116,6 +116,18 @@ class DiscoveryScheduler:
             execute=lambda: self._execute_backfill(trigger=trigger, limit=limit),
         )
 
+    async def run_apply(
+        self,
+        *,
+        trigger: str = "api",
+        limit: int = BACKFILL_LIMIT,
+    ) -> dict[str, Any]:
+        """Score and send applications for NEW/DRAFT matches."""
+        return await self._guarded_run(
+            trigger=trigger,
+            execute=lambda: self._execute_apply(trigger=trigger, limit=limit),
+        )
+
     async def _guarded_run(self, *, trigger: str, execute) -> dict[str, Any]:
         if self._lock.locked() or self._running:
             return {
@@ -208,6 +220,27 @@ class DiscoveryScheduler:
             "stats": stats,
         }
 
+    async def _execute_apply(self, *, trigger: str, limit: int) -> dict[str, Any]:
+        readiness = self._backfill_readiness_check()
+        if readiness is not None:
+            return {**readiness, "trigger": trigger}
+
+        try:
+            stats = await self._run_apply(limit=limit)
+        except PreferencesMissingError as exc:
+            return {
+                "status": "skipped",
+                "reason": str(exc),
+                "trigger": trigger,
+            }
+
+        logger.info("Apply finished trigger=%s stats=%s", trigger, stats)
+        return {
+            "status": "ok",
+            "trigger": trigger,
+            "stats": stats,
+        }
+
     def _readiness_check(self) -> dict[str, Any] | None:
         if not self.settings.perplexity_configured:
             return {
@@ -260,6 +293,17 @@ class DiscoveryScheduler:
 
         pipeline = Pipeline(self.settings)
         return await pipeline.backfill(repository, preferences, limit)
+
+    async def _run_apply(self, *, limit: int) -> dict[str, int]:
+        from app.api.deps import get_repository
+
+        repository = get_repository()
+        preferences = await repository.get_preferences()
+        if not preferences:
+            raise PreferencesMissingError("Preferences have not been saved")
+
+        pipeline = Pipeline(self.settings)
+        return await pipeline.apply_matches(repository, preferences, limit)
 
 
 class PreferencesMissingError(RuntimeError):

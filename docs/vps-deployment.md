@@ -34,16 +34,26 @@ cd /root/applypilot
 ./scripts/backup-db.sh          # snapshot before changes
 docker compose up -d --build    # never add -v
 docker compose ps
-curl -s http://127.0.0.1:8000/api/health   # expect repair_version: cv-full-1
+curl -s http://127.0.0.1:8000/api/health   # expect repair_version: cv-apply-1
 curl -s http://127.0.0.1:8000/api/scheduler/status
 ```
 
 ## One-line repair pull (Hostinger console)
 
-If cloud-agent SSH is unavailable, paste this as **root** in the Hostinger VPS browser terminal:
+This script must run **on the VPS**, as **root**, in **bash**. It will not work from a Windows PC.
+
+In Windows PowerShell, `curl` is `Invoke-WebRequest`, so `curl -fsSL ... | bash` fails with `A parameter cannot be found that matches parameter name 'fsSL'`.
+
+**Correct place:** Hostinger hPanel → VPS → Browser terminal → log in as `root`, then paste:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/repair-applypilot-cv-53b6/scripts/vps-pull-repair.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/rescore-full-cv-53b6/scripts/vps-pull-repair.sh | bash
+```
+
+If you already have SSH from Windows, this PowerShell line is the remote equivalent (it still runs on the VPS):
+
+```powershell
+ssh root@168.231.114.133 "curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/rescore-full-cv-53b6/scripts/vps-pull-repair.sh | bash"
 ```
 
 That keeps `config/.env` and the Postgres volume. It does **not** run `docker compose down -v`.
@@ -84,6 +94,49 @@ Public URL: `http://168.231.114.133:8765`
 | `DISCOVERY_SCHEDULE_MODE=twice_daily` | Fixed times |
 | `DISCOVERY_TIMES=08:00,20:00` | London wall clock |
 | `DISCOVERY_TIMEZONE=Europe/London` | Timezone |
+| `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASSWORD` `APPLY_FROM_EMAIL` | Send applications by email |
+| `UNIPILE_*` | Optional LinkedIn/email send via Unipile |
+
+## SMTP on the VPS (Gmail)
+
+ApplyPilot does not run its own mail server. It logs into **your** mailbox and sends from there.
+
+**Gmail (simplest if you apply from that address):**
+
+1. Google Account → Security → 2-Step Verification (must be on).
+2. Security → App passwords → create one named `ApplyPilot`.
+3. Copy the 16-character password. Do not use your normal Gmail password.
+
+On the VPS as root (Hostinger bash console, not Windows PowerShell):
+
+```bash
+cd /root/applypilot
+nano config/.env
+```
+
+Set:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASSWORD=xxxx xxxx xxxx xxxx
+APPLY_FROM_EMAIL=you@gmail.com
+```
+
+Remove spaces from the app password if the send fails. Then recreate **only** the backend (never `docker compose down -v`):
+
+```bash
+cd /root/applypilot
+docker compose up -d --force-recreate backend
+curl -sS http://127.0.0.1:8000/api/health
+```
+
+Expect `"smtp_configured": true` and `"can_send_applications": true`.
+
+**Hostinger mailbox instead of Gmail:** use Hostinger’s SMTP host (often `smtp.hostinger.com`), port `587`, and that mailbox as `SMTP_USER` / `APPLY_FROM_EMAIL`.
+
+SMTP only sends when a listing has a recruiter email. The current drafts mostly do not. Easy Apply is still LinkedIn-in-the-browser.
 
 ## Access blockers (must be provided to the agent)
 

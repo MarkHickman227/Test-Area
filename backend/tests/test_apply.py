@@ -24,7 +24,36 @@ def test_listing_contact_email_extracts_real_address():
 
 
 @pytest.mark.asyncio
-async def test_auto_apply_records_submission_without_smtp():
+async def test_auto_apply_sends_via_unipile_when_listing_has_email(monkeypatch):
+    async def fake_email(settings, **kwargs):
+        assert kwargs["to_email"] == "jane.recruiter@sanderson.com"
+        return True
+
+    monkeypatch.setattr("app.services.unipile.send_unipile_email", fake_email)
+    result = await auto_apply(
+        {
+            "title": "Solutions Architect",
+            "description": "Apply to jane.recruiter@sanderson.com",
+        },
+        {"cover_letter": "Dear Hiring Manager"},
+        {"raw_text": "Enterprise Architect with Azure."},
+        type(
+            "S",
+            (),
+            {
+                "unipile_dsn": "https://api1.unipile.com:13465",
+                "unipile_api_key": "key",
+                "unipile_account_id": "acc",
+            },
+        )(),
+    )
+    assert result["submitted"] is True
+    assert result["emailed"] is True
+    assert result["channel"] == "unipile_email"
+
+
+@pytest.mark.asyncio
+async def test_auto_apply_does_not_fake_submit_without_smtp():
     result = await auto_apply(
         {
             "title": "Solutions Architect",
@@ -35,6 +64,6 @@ async def test_auto_apply_records_submission_without_smtp():
         {"raw_text": "Enterprise Architect with Azure."},
         type("S", (), {})(),
     )
-    assert result["submitted"] is True
+    assert result["submitted"] is False
     assert result["emailed"] is False
-    assert result["channel"] == "application_pack"
+    assert result["channel"] == "apply_blocked"

@@ -1,10 +1,13 @@
 #!/bin/bash
-# Run on the Hostinger VPS as root. Pulls the CV scoring repair onto
-# /root/applypilot and rebuilds Docker Compose without deleting Postgres.
+# Run as root in a Linux/bash shell on the Hostinger VPS (browser console
+# or ssh root@168.231.114.133). Do not run from Windows PowerShell — there
+# `curl` is Invoke-WebRequest and `-fsSL` is not a valid parameter.
+# Pulls the CV scoring repair onto /root/applypilot and rebuilds Docker
+# Compose without deleting Postgres.
 set -euo pipefail
 
 APP_DIR=/root/applypilot
-BRANCH=cursor/repair-applypilot-cv-53b6
+BRANCH="${APPLYPILOT_REPAIR_BRANCH:-cursor/rescore-full-cv-53b6}"
 ZIP_URL="https://github.com/MarkHickman227/Test-Area/archive/refs/heads/${BRANCH}.zip"
 STAGING=/tmp/applypilot-repair-$$
 
@@ -55,20 +58,25 @@ cd "$APP_DIR"
 docker compose up -d --build
 docker compose ps
 
-for _ in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:8000/api/health | grep -q 'cv-full-1'; then
-    echo "repair_version is cv-full-1"
+for _ in $(seq 1 45); do
+  if curl -fsS --max-time 10 http://127.0.0.1:8000/api/health | grep -qE 'cv-apply-1|cv-rescore-1|cv-full-1'; then
+    echo "repair_version is current"
     break
   fi
   sleep 2
 done
-curl -sS http://127.0.0.1:8000/api/health
+curl -sS --max-time 15 http://127.0.0.1:8000/api/health
 echo
-curl -sS -X POST http://127.0.0.1:8000/api/cvs/reparse
+curl -sS --max-time 60 -X POST http://127.0.0.1:8000/api/cvs/reparse
 echo
-curl -sS --max-time 300 -X POST 'http://127.0.0.1:8000/api/pipeline/backfill?limit=40'
+# One pass only covers 80 jobs. Repeat so older NEW rows leave the old 0-25 scores.
+for _ in 1 2 3; do
+  curl -sS --max-time 300 -X POST 'http://127.0.0.1:8000/api/pipeline/backfill?limit=80'
+  echo
+done
+curl -sS --max-time 300 -X POST 'http://127.0.0.1:8000/api/pipeline/apply?limit=80'
 echo
-curl -sS http://127.0.0.1:8000/api/analytics
+curl -sS --max-time 15 http://127.0.0.1:8000/api/analytics
 echo
 rm -rf "$STAGING"
-echo "Repair pull finished. Repeat POST /api/pipeline/backfill if score_ge_60 is still 0."
+echo "Repair pull finished. Repeat POST /api/pipeline/backfill if unscored jobs remain."

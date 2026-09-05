@@ -145,20 +145,48 @@ class SupabaseRepository:
             json={"job_id": job_id, "artifact_type": artifact_type, "content": content},
         )
 
-    async def insert_recruiter_outreach(self, job_id: str, email_body: str) -> None:
-        headers = {**self.headers, "Prefer": "return=representation,resolution=ignore-duplicates"}
+    async def insert_recruiter_outreach(
+        self,
+        job_id: str,
+        email_body: str,
+        contact_email: str | None = None,
+        email_sent: bool = False,
+        linkedin_sent: bool = False,
+    ) -> None:
+        headers = {**self.headers, "Prefer": "return=representation,resolution=merge-duplicates"}
         url = f"{self.settings.supabase_rest_url}/recruiter_outreach"
-        payload = {"job_id": job_id, "email_body": email_body}
+        payload = {
+            "job_id": job_id,
+            "email_body": email_body,
+            "contact_email": contact_email,
+            "email_sent": email_sent,
+            "linkedin_sent": linkedin_sent,
+        }
         async with httpx.AsyncClient(timeout=20) as client:
             await client.post(url, headers=headers, json=payload)
 
+    async def list_applyable_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
+        rows = await self._request(
+            "GET",
+            "jobs",
+            params={
+                "select": "*",
+                "status": "in.(NEW,DRAFT)",
+                "order": "created_at.desc",
+                "limit": str(limit),
+            },
+        )
+        return list(rows or [])
+
     async def get_best_cv(self) -> dict[str, Any] | None:
+        from app.services.cv_parser import select_best_cv
+
         rows = await self._request(
             "GET",
             "cvs",
-            params={"select": "id,label,parsed_profile,raw_text", "order": "created_at.desc", "limit": "1"},
+            params={"select": "id,label,parsed_profile,raw_text", "order": "created_at.desc"},
         )
-        return rows[0] if rows else None
+        return select_best_cv(list(rows or []))
 
     async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
         rows = await self._request(
