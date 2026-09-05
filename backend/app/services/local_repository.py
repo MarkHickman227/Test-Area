@@ -119,11 +119,11 @@ class LocalRepository:
         self._save()
 
     async def get_best_cv(self) -> dict[str, Any] | None:
+        from app.services.cv_parser import select_best_cv
+
         cvs = list(self._data["cvs"].values())
-        if not cvs:
-            return None
         cvs.sort(key=lambda cv: cv.get("created_at") or "", reverse=True)
-        return cvs[0]
+        return select_best_cv(cvs)
 
     async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
         pending = []

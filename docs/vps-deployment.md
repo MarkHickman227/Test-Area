@@ -34,7 +34,7 @@ cd /root/applypilot
 ./scripts/backup-db.sh          # snapshot before changes
 docker compose up -d --build    # never add -v
 docker compose ps
-curl -s http://127.0.0.1:8000/api/health   # expect repair_version: cv-full-1
+curl -s http://127.0.0.1:8000/api/health   # expect repair_version: cv-rescore-1
 curl -s http://127.0.0.1:8000/api/scheduler/status
 ```
 
@@ -43,7 +43,7 @@ curl -s http://127.0.0.1:8000/api/scheduler/status
 If cloud-agent SSH is unavailable, paste this as **root** in the Hostinger VPS browser terminal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/repair-applypilot-cv-53b6/scripts/vps-pull-repair.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/rescore-full-cv-53b6/scripts/vps-pull-repair.sh | bash
 ```
 
 That keeps `config/.env` and the Postgres volume. It does **not** run `docker compose down -v`.

@@ -209,11 +209,13 @@ class PostgresRepository:
         )
 
     async def get_best_cv(self) -> dict[str, Any] | None:
+        from app.services.cv_parser import select_best_cv
+
         rows = await self._fetch_all(
-            "select id, label, parsed_profile, raw_text from cvs order by created_at desc limit 1",
+            "select id, label, parsed_profile, raw_text from cvs order by created_at desc",
             [],
         )
-        return dict(rows[0]) if rows else None
+        return select_best_cv([dict(row) for row in rows])
 
     async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
         rows = await self._fetch_all(

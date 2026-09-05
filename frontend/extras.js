@@ -103,7 +103,29 @@ async function reparseCvs() {
   }
 }
 
+async function rescoreFromCurrentCv() {
+  try {
+    const result = await request("/pipeline/backfill?limit=80", { method: "POST" });
+    const stats = result.stats || result;
+    alert(
+      `Rescored from Current CV. scored ${stats.scored ?? 0}, drafts ${stats.generated ?? 0}, applied ${stats.applied ?? 0}.`
+    );
+    if (typeof loadJobs === "function") {
+      loadJobs();
+    }
+    if (typeof loadHealth === "function") {
+      loadHealth();
+    }
+  } catch (error) {
+    alert(`Failed to rescore jobs: ${error.message}`);
+  }
+}
+
 document.getElementById("cv-reparse").addEventListener("click", reparseCvs);
+const cvRescore = document.getElementById("cv-rescore");
+if (cvRescore) cvRescore.addEventListener("click", rescoreFromCurrentCv);
+const dashRescore = document.getElementById("rescore-cv");
+if (dashRescore) dashRescore.addEventListener("click", rescoreFromCurrentCv);
 
 document.getElementById("cv-upload").addEventListener("click", async () => {
   const label = document.getElementById("cv-label").value.trim();

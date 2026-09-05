@@ -14,7 +14,7 @@ from app.services.repository import SupabaseRepository
 logger = logging.getLogger(__name__)
 
 SCORE_THRESHOLD = 60
-BACKFILL_LIMIT = 40
+BACKFILL_LIMIT = 80
 
 
 class Pipeline:
@@ -147,15 +147,21 @@ class Pipeline:
         auto_apply_on = getattr(self.settings, "auto_apply", True)
         if auto_apply_on:
             result = await auto_apply(job, artifacts, cv_profile, self.settings)
-            await repository.update_job_fields(
-                job_id,
-                {"status": "SUBMITTED", "submitted_at": _now()},
-            )
-            stats["applied"] += 1
+            if result.get("submitted"):
+                await repository.update_job_fields(
+                    job_id,
+                    {"status": "SUBMITTED", "submitted_at": _now()},
+                )
+                stats["applied"] += 1
+                logger.info(
+                    "Applied to %s via %s", job.get("title"), result.get("channel")
+                )
+                return
             logger.info(
-                "Applied to %s via %s", job.get("title"), result.get("channel")
+                "Pack ready for %s but send was blocked (%s)",
+                job.get("title"),
+                result.get("channel"),
             )
-            return
 
         await repository.update_job_fields(job_id, {"status": "DRAFT"})
         logger.info("Generated %d artifacts for job %s", len(artifacts), job.get("title"))

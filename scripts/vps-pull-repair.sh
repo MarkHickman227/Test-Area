@@ -4,7 +4,7 @@
 set -euo pipefail
 
 APP_DIR=/root/applypilot
-BRANCH=cursor/repair-applypilot-cv-53b6
+BRANCH="${APPLYPILOT_REPAIR_BRANCH:-cursor/rescore-full-cv-53b6}"
 ZIP_URL="https://github.com/MarkHickman227/Test-Area/archive/refs/heads/${BRANCH}.zip"
 STAGING=/tmp/applypilot-repair-$$
 
@@ -56,8 +56,8 @@ docker compose up -d --build
 docker compose ps
 
 for _ in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:8000/api/health | grep -q 'cv-full-1'; then
-    echo "repair_version is cv-full-1"
+  if curl -fsS http://127.0.0.1:8000/api/health | grep -qE 'cv-rescore-1|cv-full-1'; then
+    echo "repair_version is current"
     break
   fi
   sleep 2
@@ -66,7 +66,7 @@ curl -sS http://127.0.0.1:8000/api/health
 echo
 curl -sS -X POST http://127.0.0.1:8000/api/cvs/reparse
 echo
-curl -sS --max-time 300 -X POST 'http://127.0.0.1:8000/api/pipeline/backfill?limit=40'
+curl -sS --max-time 300 -X POST 'http://127.0.0.1:8000/api/pipeline/backfill?limit=80'
 echo
 curl -sS http://127.0.0.1:8000/api/analytics
 echo

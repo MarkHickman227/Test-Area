@@ -153,12 +153,14 @@ class SupabaseRepository:
             await client.post(url, headers=headers, json=payload)
 
     async def get_best_cv(self) -> dict[str, Any] | None:
+        from app.services.cv_parser import select_best_cv
+
         rows = await self._request(
             "GET",
             "cvs",
-            params={"select": "id,label,parsed_profile,raw_text", "order": "created_at.desc", "limit": "1"},
+            params={"select": "id,label,parsed_profile,raw_text", "order": "created_at.desc"},
         )
-        return rows[0] if rows else None
+        return select_best_cv(list(rows or []))
 
     async def list_pending_jobs(self, limit: int = 15) -> list[dict[str, Any]]:
         rows = await self._request(

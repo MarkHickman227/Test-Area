@@ -1,4 +1,9 @@
-from app.services.cv_parser import is_complete_profile, parse_cv_profile, profile_for_scoring
+from app.services.cv_parser import (
+    is_complete_profile,
+    parse_cv_profile,
+    profile_for_scoring,
+    select_best_cv,
+)
 
 
 SAMPLE = """
@@ -83,3 +88,11 @@ def test_profile_for_scoring_replaces_empty_stored_profile():
 def test_profile_for_scoring_rejects_empty_cv():
     assert profile_for_scoring(None) is None
     assert profile_for_scoring({"parsed_profile": {}, "raw_text": ""}) is None
+
+
+def test_select_best_cv_prefers_current_label():
+    older = {"label": "Current", "raw_text": "EA", "created_at": "2026-08-25"}
+    newer = {"label": "Draft", "raw_text": "other", "created_at": "2026-09-05"}
+    assert select_best_cv([newer, older])["label"] == "Current"
+    assert select_best_cv([newer])["label"] == "Draft"
+    assert select_best_cv([]) is None

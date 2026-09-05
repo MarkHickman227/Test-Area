@@ -21,7 +21,7 @@ from app.services.scheduler import DiscoveryScheduler
 router = APIRouter(prefix="/api")
 
 Repo = Annotated[Any, Depends(get_repository)]
-REPAIR_VERSION = "cv-full-1"
+REPAIR_VERSION = "cv-rescore-1"
 
 
 def get_writer() -> ApplicationWriter:
@@ -126,9 +126,9 @@ async def backfill_pipeline(
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
     authorization: Annotated[str | None, Header()] = None,
-    limit: Annotated[int, Query(ge=1, le=50)] = 25,
+    limit: Annotated[int, Query(ge=1, le=200)] = 80,
 ) -> dict[str, object]:
-    """Score existing NEW jobs (including incorrect scores below 60) without discovery."""
+    """Re-score existing NEW jobs against the uploaded Current CV."""
     _require_trigger_auth(settings, authorization)
     scheduler = _get_scheduler(request)
     result = await scheduler.run_backfill(trigger="api", limit=limit)

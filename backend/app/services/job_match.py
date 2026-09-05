@@ -10,11 +10,27 @@ _ROLE_TERMS = (
     "enterprise architect",
     "solutions architect",
     "solution architect",
+    "cloud architect",
+    "integration architect",
+    "platform architect",
+    "data architect",
+    "security architect",
+    "azure architect",
+    "aws architect",
     "chief technology officer",
     "lead architect",
     "principal architect",
     "technology director",
     "architecture director",
+)
+
+_TITLE_HINTS = (
+    ("azure", ("Azure",)),
+    ("aws", ("AWS",)),
+    ("cloud", ("Azure", "AWS", "hybrid cloud", "cloud security")),
+    ("architect", ("enterprise architecture", "solutions architecture")),
+    ("cto", ("enterprise architecture",)),
+    ("chief technology", ("enterprise architecture",)),
 )
 
 _SALES_TERMS = (
@@ -56,20 +72,23 @@ def match_job_to_cv(
     skills = [str(s) for s in (cv_profile.get("skills") or []) if str(s).strip()]
     domains = [str(d) for d in (cv_profile.get("domains") or []) if str(d).strip()]
     cv_roles = [str(r) for r in (cv_profile.get("roles") or []) if str(r).strip()]
+    title = (job.get("title") or "").lower()
     matched_skills = [s for s in skills if _term_in_text(s, job_text)]
-    for term in _wanted_terms(job):
+    for term in _wanted_terms(job) + _title_hints(title):
         if _term_in_text(term, cv_text) and not any(term.lower() == s.lower() for s in matched_skills):
             matched_skills.append(term)
     matched_domains = [d for d in domains if _term_in_text(d, job_text)]
     matched_cv_roles = [r for r in cv_roles if _term_in_text(r, job_text)]
     role_hits = matched_cv_roles or [role for role in _ROLE_TERMS if _term_in_text(role, job_text)]
-    title = (job.get("title") or "").lower()
     sales_role = any(term in title for term in _SALES_TERMS) and "architect" not in title
 
     # Listings are already from the user's EA/SA/CTO search. Most should be
     # apply-ready; only clearly unrelated titles stay below the draft threshold.
     score = 72
-    if any(role in title for role in _ROLE_TERMS) or "cto" in title:
+    architect_title = "architect" in title or "cto" in title or "chief technology" in title
+    if any(role in title for role in _ROLE_TERMS) or "cto" in title or (
+        architect_title and not sales_role
+    ):
         score += 10
     elif role_hits:
         score += 6
@@ -176,6 +195,15 @@ def _cv_text(cv_profile: dict[str, Any]) -> str:
     return " ".join(parts).lower()
 
 
+def _title_hints(title: str) -> list[str]:
+    hints: list[str] = []
+    lowered = (title or "").lower()
+    for needle, terms in _TITLE_HINTS:
+        if needle in lowered:
+            hints.extend(terms)
+    return hints
+
+
 def _wanted_terms(job: dict[str, Any]) -> list[str]:
     required = job.get("parsed_requirements") or {}
     terms: list[str] = []
@@ -212,8 +240,10 @@ def _explanation(
         bits.append("CV roles that overlap the listing: " + ", ".join(role_hits[:4]) + ".")
     if matched_skills:
         bits.append("Evidence in the full CV: " + ", ".join(matched_skills[:8]) + ".")
-    else:
+    elif _wanted_terms(job):
         bits.append("The full CV does not name the skills listed in this job.")
+    else:
+        bits.append("Scored from the job title against the full uploaded CV.")
     if matched_domains:
         bits.append("Domain overlap: " + ", ".join(matched_domains[:4]) + ".")
     if gaps:

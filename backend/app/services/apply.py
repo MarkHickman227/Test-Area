@@ -92,16 +92,16 @@ async def auto_apply(
     cv_profile: dict[str, Any] | None,
     settings: Any,
 ) -> dict[str, Any]:
-    """Record the application. Email it when SMTP and a listing contact exist."""
+    """Send only when SMTP and a listing contact exist. Packs alone are not applies."""
     cv_text = ((cv_profile or {}).get("raw_text") or (cv_profile or {}).get("summary") or "").strip()
     contact = listing_contact_email(job)
     emailed = False
     if contact and smtp_configured(settings):
         emailed = send_application_email(settings, job, pack, cv_text, contact)
     return {
-        "submitted": True,
+        "submitted": emailed,
         "emailed": emailed,
         "contact_email": contact,
         "source_url": job.get("source_url"),
-        "channel": "email" if emailed else "application_pack",
+        "channel": "email" if emailed else "apply_blocked",
     }

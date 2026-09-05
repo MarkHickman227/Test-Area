@@ -125,7 +125,8 @@ async def test_pipeline_runs_full_cycle():
     assert stats["enriched"] == 1
     assert stats["scored"] == 1
     assert stats["generated"] == 1
-    assert stats["applied"] == 1
+    assert stats["applied"] == 0
+    assert repo.jobs[JOB_ID]["status"] == "DRAFT"
     assert len(repo.inserted_artifacts) == 2
     assert repo.updated_fields[JOB_ID]["score"] == 85
 
@@ -293,8 +294,8 @@ async def test_pipeline_rescores_azure_job_when_parsed_profile_was_empty():
     assert repo.updated_fields[JOB_ID]["score"] != 15
     assert "empty" not in explanation
     assert "azure" in explanation or "solution architect" in explanation
-    assert repo.jobs[JOB_ID]["status"] == "SUBMITTED"
-    assert stats["applied"] == 1
+    assert repo.jobs[JOB_ID]["status"] == "DRAFT"
+    assert stats["applied"] == 0
     assert is_complete_profile(repo.cv["parsed_profile"])
     assert "Azure" in repo.cv["parsed_profile"]["skills"]
     assert repo.cv["parsed_profile"]["roles"]

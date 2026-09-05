@@ -114,6 +114,17 @@ def is_complete_profile(profile: dict[str, Any] | None) -> bool:
     return bool(skills or roles) and bool(summary)
 
 
+def select_best_cv(rows: list[dict[str, Any]] | None) -> dict[str, Any] | None:
+    """Prefer the uploaded Current CV, then the newest row."""
+    cvs = [row for row in (rows or []) if row]
+    if not cvs:
+        return None
+    for cv in cvs:
+        if str(cv.get("label") or "").strip().lower() == "current":
+            return cv
+    return cvs[0]
+
+
 def profile_for_scoring(cv: dict[str, Any] | None) -> dict[str, Any] | None:
     if not cv:
         return None
