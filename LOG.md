@@ -2,6 +2,24 @@
 
 Operational record of changes. Newest first.
 
+## 2026-09-05 — Windows PowerShell cannot run the VPS pull
+
+From `PS C:\Users\MarkHickman>`, this failed:
+
+```
+curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/rescore-full-cv-53b6/scripts/vps-pull-repair.sh | bash
+```
+
+PowerShell maps `curl` to `Invoke-WebRequest`. `-fsSL` is not a valid parameter, so it errors: `A parameter cannot be found that matches parameter name 'fsSL'`. Piping to `bash` also does nothing useful on Windows. The script must run **as root on the Hostinger VPS**.
+
+Use Hostinger browser terminal as root, or from PowerShell:
+
+```powershell
+ssh root@168.231.114.133 "curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/rescore-full-cv-53b6/scripts/vps-pull-repair.sh | bash"
+```
+
+Documented in `docs/vps-deployment.md` and the header of `scripts/vps-pull-repair.sh`.
+
 ## 2026-09-05 — Rescore Current CV and real apply path
 
 Branch: `cursor/rescore-full-cv-53b6`  

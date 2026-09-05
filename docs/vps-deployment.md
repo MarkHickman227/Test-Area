@@ -40,10 +40,20 @@ curl -s http://127.0.0.1:8000/api/scheduler/status
 
 ## One-line repair pull (Hostinger console)
 
-If cloud-agent SSH is unavailable, paste this as **root** in the Hostinger VPS browser terminal:
+This script must run **on the VPS**, as **root**, in **bash**. It will not work from a Windows PC.
+
+In Windows PowerShell, `curl` is `Invoke-WebRequest`, so `curl -fsSL ... | bash` fails with `A parameter cannot be found that matches parameter name 'fsSL'`.
+
+**Correct place:** Hostinger hPanel → VPS → Browser terminal → log in as `root`, then paste:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/rescore-full-cv-53b6/scripts/vps-pull-repair.sh | bash
+```
+
+If you already have SSH from Windows, this PowerShell line is the remote equivalent (it still runs on the VPS):
+
+```powershell
+ssh root@168.231.114.133 "curl -fsSL https://raw.githubusercontent.com/MarkHickman227/Test-Area/cursor/rescore-full-cv-53b6/scripts/vps-pull-repair.sh | bash"
 ```
 
 That keeps `config/.env` and the Postgres volume. It does **not** run `docker compose down -v`.

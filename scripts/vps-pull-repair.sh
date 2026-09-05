@@ -1,6 +1,9 @@
 #!/bin/bash
-# Run on the Hostinger VPS as root. Pulls the CV scoring repair onto
-# /root/applypilot and rebuilds Docker Compose without deleting Postgres.
+# Run as root in a Linux/bash shell on the Hostinger VPS (browser console
+# or ssh root@168.231.114.133). Do not run from Windows PowerShell — there
+# `curl` is Invoke-WebRequest and `-fsSL` is not a valid parameter.
+# Pulls the CV scoring repair onto /root/applypilot and rebuilds Docker
+# Compose without deleting Postgres.
 set -euo pipefail
 
 APP_DIR=/root/applypilot
