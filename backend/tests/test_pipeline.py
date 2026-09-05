@@ -58,8 +58,14 @@ class FakePipelineRepository:
     async def insert_artifact(self, job_id, artifact_type, content):
         self.inserted_artifacts.append((job_id, artifact_type, content))
 
-    async def insert_recruiter_outreach(self, job_id, email_body):
-        self.inserted_outreach.append((job_id, email_body))
+    async def insert_recruiter_outreach(
+        self, job_id, email_body, contact_email=None, email_sent=False, linkedin_sent=False
+    ):
+        self.inserted_outreach.append((job_id, email_body, contact_email, email_sent, linkedin_sent))
+
+    async def list_applyable_jobs(self, limit=15):
+        pending = [job for job in self.jobs.values() if job.get("status") in {"NEW", "DRAFT"}]
+        return pending[:limit]
 
 
 class FakeDiscoveryService:
@@ -126,6 +132,7 @@ async def test_pipeline_runs_full_cycle():
     assert stats["scored"] == 1
     assert stats["generated"] == 1
     assert stats["applied"] == 0
+    assert stats["apply_blocked"] == 1
     assert repo.jobs[JOB_ID]["status"] == "DRAFT"
     assert len(repo.inserted_artifacts) == 2
     assert repo.updated_fields[JOB_ID]["score"] == 85
@@ -296,6 +303,39 @@ async def test_pipeline_rescores_azure_job_when_parsed_profile_was_empty():
     assert "azure" in explanation or "solution architect" in explanation
     assert repo.jobs[JOB_ID]["status"] == "DRAFT"
     assert stats["applied"] == 0
+    assert stats["apply_blocked"] == 1
     assert is_complete_profile(repo.cv["parsed_profile"])
     assert "Azure" in repo.cv["parsed_profile"]["skills"]
     assert repo.cv["parsed_profile"]["roles"]
+
+
+@pytest.mark.asyncio
+async def test_apply_matches_submits_when_send_succeeds(monkeypatch):
+    async def sent(job, pack, cv_profile, settings):
+        return {
+            "submitted": True,
+            "emailed": True,
+            "linkedin_sent": False,
+            "contact_email": "jane.recruiter@sanderson.com",
+            "channel": "unipile_email",
+        }
+
+    monkeypatch.setattr("app.services.pipeline.auto_apply", sent)
+    existing = {
+        "id": JOB_ID,
+        "title": "Solutions Architect",
+        "status": "DRAFT",
+        "score": 15,
+        "description": "Apply to jane.recruiter@sanderson.com",
+        "job_type": "PERM",
+        "parsed_requirements": {},
+    }
+    pipeline = _pipeline(discovery=FakeDiscoveryService(jobs=[]))
+    repo = FakePipelineRepository(existing_jobs=[existing])
+    prefs = Preferences(target_titles=["Solutions Architect"], locations=["London"])
+
+    stats = await pipeline.apply_matches(repo, prefs)
+
+    assert stats["applied"] == 1
+    assert repo.jobs[JOB_ID]["status"] == "SUBMITTED"
+    assert repo.inserted_outreach[0][3] is True

@@ -149,9 +149,10 @@ def test_health_reports_configuration_state():
     assert "supabase_configured" in body
     assert body["discovery_schedule_mode"] == "twice_daily"
     assert body["discovery_times"] == ["08:00", "20:00"]
-    assert body["repair_version"] == "cv-rescore-1"
+    assert body["repair_version"] == "cv-apply-1"
     assert body["auto_apply"] is True
     assert body["full_cv_scoring"] is True
+    assert body["can_send_applications"] is False
 
 
 def test_pipeline_run_skips_without_credentials():
@@ -167,6 +168,15 @@ def test_pipeline_backfill_skips_without_credentials():
     client, _ = make_client()
 
     response = client.post("/api/pipeline/backfill")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "skipped"
+
+
+def test_pipeline_apply_skips_without_credentials():
+    client, _ = make_client()
+
+    response = client.post("/api/pipeline/apply")
 
     assert response.status_code == 200
     assert response.json()["status"] == "skipped"

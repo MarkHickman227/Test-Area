@@ -50,6 +50,21 @@ class Pipeline:
         logger.info("Backfill complete: %s", stats)
         return stats
 
+    async def apply_matches(
+        self,
+        repository: SupabaseRepository,
+        preferences: Preferences,
+        limit: int = BACKFILL_LIMIT,
+    ) -> dict[str, int]:
+        stats = _empty_stats()
+        self._include_drafts = True
+        try:
+            await self._process_pending(repository, preferences, stats, limit)
+        finally:
+            self._include_drafts = False
+        logger.info("Apply matches complete: %s", stats)
+        return stats
+
     async def _process_pending(
         self,
         repository: SupabaseRepository,
@@ -65,6 +80,10 @@ class Pipeline:
             logger.warning("No usable CV loaded — scoring and artifact generation will be skipped")
 
         pending = await repository.list_pending_jobs(limit)
+        if getattr(self, "_include_drafts", False) and hasattr(
+            repository, "list_applyable_jobs"
+        ):
+            pending = await repository.list_applyable_jobs(limit)
         for job in pending:
             await self._enrich_and_score(
                 repository, str(job["id"]), job, cv_profile, preferences, stats
@@ -136,9 +155,8 @@ class Pipeline:
             artifacts.update(build_application_pack(job, cv_profile))
         for artifact_type, content in artifacts.items():
             if artifact_type == "recruiter_outreach":
-                await repository.insert_recruiter_outreach(job_id, content)
-            else:
-                await repository.insert_artifact(job_id, artifact_type, content)
+                continue
+            await repository.insert_artifact(job_id, artifact_type, content)
 
         if not artifacts:
             return
@@ -147,6 +165,15 @@ class Pipeline:
         auto_apply_on = getattr(self.settings, "auto_apply", True)
         if auto_apply_on:
             result = await auto_apply(job, artifacts, cv_profile, self.settings)
+            outreach = artifacts.get("recruiter_outreach") or artifacts.get("cover_letter") or ""
+            if hasattr(repository, "insert_recruiter_outreach"):
+                await repository.insert_recruiter_outreach(
+                    job_id,
+                    outreach,
+                    contact_email=result.get("contact_email"),
+                    email_sent=bool(result.get("emailed")),
+                    linkedin_sent=bool(result.get("linkedin_sent")),
+                )
             if result.get("submitted"):
                 await repository.update_job_fields(
                     job_id,
@@ -157,10 +184,11 @@ class Pipeline:
                     "Applied to %s via %s", job.get("title"), result.get("channel")
                 )
                 return
+            stats["apply_blocked"] += 1
             logger.info(
                 "Pack ready for %s but send was blocked (%s)",
                 job.get("title"),
-                result.get("channel"),
+                result.get("reason") or result.get("channel"),
             )
 
         await repository.update_job_fields(job_id, {"status": "DRAFT"})
@@ -176,6 +204,7 @@ def _empty_stats() -> dict[str, int]:
         "scored": 0,
         "generated": 0,
         "applied": 0,
+        "apply_blocked": 0,
         "skipped_no_cv": 0,
     }
 

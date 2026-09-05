@@ -21,7 +21,7 @@ from app.services.scheduler import DiscoveryScheduler
 router = APIRouter(prefix="/api")
 
 Repo = Annotated[Any, Depends(get_repository)]
-REPAIR_VERSION = "cv-rescore-1"
+REPAIR_VERSION = "cv-apply-1"
 
 
 def get_writer() -> ApplicationWriter:
@@ -89,6 +89,8 @@ async def health(
         "repair_version": REPAIR_VERSION,
         "auto_apply": settings.auto_apply,
         "smtp_configured": getattr(settings, "smtp_configured", False),
+        "unipile_configured": getattr(settings, "unipile_configured", False),
+        "can_send_applications": getattr(settings, "can_send_applications", False),
         "full_cv_scoring": True,
     }
     if scheduler is not None:
@@ -132,6 +134,27 @@ async def backfill_pipeline(
     _require_trigger_auth(settings, authorization)
     scheduler = _get_scheduler(request)
     result = await scheduler.run_backfill(trigger="api", limit=limit)
+    if result.get("status") == "rejected":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result)
+    if result.get("status") == "error":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=result,
+        )
+    return result
+
+
+@router.post("/pipeline/apply")
+async def apply_pipeline(
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+    authorization: Annotated[str | None, Header()] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 80,
+) -> dict[str, object]:
+    """Apply to NEW/DRAFT jobs that score 60+ against the Current CV."""
+    _require_trigger_auth(settings, authorization)
+    scheduler = _get_scheduler(request)
+    result = await scheduler.run_apply(trigger="api", limit=limit)
     if result.get("status") == "rejected":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result)
     if result.get("status") == "error":
