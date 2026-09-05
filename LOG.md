@@ -2,6 +2,20 @@
 
 Operational record of changes. Newest first.
 
+## 2026-09-05 — SMTP is on the VPS; still 0 new sends
+
+Live health now has `smtp_configured: true` and `can_send_applications: true`. Unipile is still off.
+
+After SMTP was added and the backend recreated:
+
+- 214 jobs
+- 153 DRAFT at 60+ (packs written from the Current CV)
+- 1 NEW: Enterprise Account Director at 32 (correctly below threshold)
+- 60 SUBMITTED: still the 31 July LinkedIn import
+- Azure Solution Architect: 100 DRAFT, cover letter present, `contact_email` null, `email_sent` false
+
+A live `POST /api/pipeline/apply?limit=20` ran after SMTP was on: processed 20, applied 0, apply_blocked 20. SMTP can send, but these listings still have no recruiter address.
+
 ## 2026-09-05 — How to turn on SMTP on the VPS
 
 ApplyPilot sends through your mailbox. It does not host SMTP.
